@@ -8,13 +8,13 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 import requests
 import schedule
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -22,11 +22,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-VY_BASE_URL = "https://virtualyard.com"
-
-# Login endpoint — inspect the login form's `action` attribute and adjust if needed.
-# Common paths: /login, /signin, /auth/login, /account/login
-VY_LOGIN_URL = f"{VY_BASE_URL}/login"
+VY_BASE_URL = "https://dealers.virtualyard.com.au"
+VY_LOGIN_URL = f"{VY_BASE_URL}/login.php"
 
 # Bookings page URL — adjust after logging in and navigating to the test-drive
 # bookings section. Common paths: /bookings, /test-drives, /appointments, /dashboard
@@ -79,11 +76,7 @@ def save_seen(path: Path, seen: set) -> None:
 
 
 def send_telegram(bot_token: str, chat_id: str, message: str) -> bool:
-    """
-    Send a message via Telegram Bot API.
-
-    Returns True on success, False on failure.
-    """
+    """Send a message via Telegram Bot API. Returns True on success."""
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
         "chat_id": chat_id,
@@ -101,123 +94,77 @@ def send_telegram(bot_token: str, chat_id: str, message: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Authentication
+# Authentication — Playwright (handles JS-populated hidden fields)
 # ---------------------------------------------------------------------------
 
 
 def login(session: requests.Session, username: str, password: str) -> bool:
     """
-    Log into virtualyard.com.
+    Log into dealers.virtualyard.com.au using a headless browser.
 
-    Strategy:
-    1. GET the login page to retrieve any CSRF token.
-    2. POST credentials to the login endpoint.
-    3. Confirm success by checking for a redirect or absence of login form.
-
-    ADJUST: If login fails, inspect the login form HTML to find:
-      - The correct POST URL (form `action` attribute)
-      - The correct field names for username/password (input `name` attributes)
-      - Any hidden CSRF fields that must be included
+    The login form populates hidden `auth` and `duid` fields via JavaScript
+    (localStorage), so a plain HTTP request cannot complete the login.
+    Playwright drives a real browser, fills the form, submits it, then copies
+    the resulting cookies into the requests.Session for subsequent polling.
     """
+    log.info("Launching headless browser to log in…")
     try:
-        # Step 1: GET login page to capture CSRF token / cookies
-        log.info("Fetching login page: %s", VY_LOGIN_URL)
-        get_resp = session.get(VY_LOGIN_URL, timeout=20)
-        get_resp.raise_for_status()
-    except requests.RequestException as exc:
-        log.error("Could not reach login page: %s", exc)
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0.0.0 Safari/537.36"
+                )
+            )
+            page = context.new_page()
+
+            log.info("Navigating to login page: %s", VY_LOGIN_URL)
+            page.goto(VY_LOGIN_URL, wait_until="domcontentloaded", timeout=30_000)
+
+            # Wait for the login input to be ready
+            page.wait_for_selector("input[name='login']", timeout=15_000)
+
+            # Fill credentials
+            page.fill("input[name='login']", username)
+            page.fill("input[name='password']", password)
+
+            # Submit and wait for URL to change away from the login page
+            page.click("button[type='submit'], input[type='submit']")
+            page.wait_for_url(lambda url: "login" not in url.lower(), timeout=30_000)
+
+            final_url = page.url
+            log.info("Post-login URL: %s", final_url)
+
+            # If still on the login page, credentials are wrong
+            if "login" in final_url.lower() or page.query_selector("input[name='password']"):
+                log.error(
+                    "Login failed — still on login page after submit. "
+                    "Check VY_USERNAME / VY_PASSWORD."
+                )
+                browser.close()
+                return False
+
+            # Transfer browser cookies into the requests.Session
+            for cookie in context.cookies():
+                session.cookies.set(
+                    cookie["name"],
+                    cookie["value"],
+                    domain=cookie.get("domain", "").lstrip("."),
+                )
+
+            browser.close()
+
+    except PlaywrightTimeoutError as exc:
+        log.error("Browser timed out during login: %s", exc)
+        return False
+    except Exception as exc:
+        log.error("Unexpected error during browser login: %s", exc)
         return False
 
-    soup = BeautifulSoup(get_resp.text, "html.parser")
-
-    # --- ADJUST: locate the login form ---
-    # Try common form selectors. If none match, print page source and inspect manually.
-    form = (
-        soup.find("form", {"id": "login-form"})
-        or soup.find("form", {"class": "login"})
-        or soup.find("form", action=lambda a: a and "login" in a.lower())
-        or soup.find("form")  # fallback: first form on the page
-    )
-
-    if form is None:
-        log.error(
-            "Could not find a login form on %s. "
-            "Set VY_LOGIN_URL to the correct login endpoint and adjust selectors.",
-            VY_LOGIN_URL,
-        )
-        log.debug("Page HTML snippet:\n%s", get_resp.text[:2000])
-        return False
-
-    # Build POST data from all hidden inputs (catches CSRF tokens, etc.)
-    post_data: dict = {}
-    for hidden in form.find_all("input", {"type": "hidden"}):
-        name = hidden.get("name")
-        value = hidden.get("value", "")
-        if name:
-            post_data[name] = value
-
-    # --- ADJUST: username/password field names ---
-    # Common names: email, username, user, login / password, pass, pwd
-    username_field = _find_input_name(form, ["email", "username", "user", "login"])
-    password_field = _find_input_name(form, ["password", "pass", "pwd"])
-
-    if not username_field:
-        log.warning(
-            "Could not auto-detect username field name. "
-            "Set USERNAME_FIELD in the script to the correct input name."
-        )
-        username_field = "email"  # ADJUST fallback
-
-    if not password_field:
-        log.warning(
-            "Could not auto-detect password field name. "
-            "Set PASSWORD_FIELD in the script to the correct input name."
-        )
-        password_field = "password"  # ADJUST fallback
-
-    post_data[username_field] = username
-    post_data[password_field] = password
-
-    # Determine POST URL: use form's action or fall back to VY_LOGIN_URL
-    action = form.get("action", "")
-    if action.startswith("http"):
-        post_url = action
-    elif action:
-        post_url = VY_BASE_URL.rstrip("/") + "/" + action.lstrip("/")
-    else:
-        post_url = VY_LOGIN_URL
-
-    log.info("Posting credentials to: %s", post_url)
-    try:
-        post_resp = session.post(post_url, data=post_data, timeout=20, allow_redirects=True)
-        post_resp.raise_for_status()
-    except requests.RequestException as exc:
-        log.error("Login POST failed: %s", exc)
-        return False
-
-    # Heuristic success check: login form should no longer be present
-    post_soup = BeautifulSoup(post_resp.text, "html.parser")
-    if post_soup.find("form", {"id": "login-form"}) or post_soup.find(
-        "input", {"type": "password"}
-    ):
-        log.error(
-            "Login appears to have failed — password field still present after POST. "
-            "Check credentials and adjust login selectors."
-        )
-        log.debug("Post-login HTML snippet:\n%s", post_resp.text[:2000])
-        return False
-
-    log.info("Login successful.")
+    log.info("Login successful — cookies transferred to HTTP session.")
     return True
-
-
-def _find_input_name(form, candidates: list) -> str | None:
-    """Return the first input name from `candidates` that exists in the form."""
-    for name in candidates:
-        inp = form.find("input", {"name": name})
-        if inp:
-            return name
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +188,6 @@ def fetch_bookings(session: requests.Session) -> list[dict]:
         log.error("Could not fetch bookings page: %s", exc)
         return []
 
-    # Check if the response is JSON (API endpoint)
     content_type = resp.headers.get("Content-Type", "")
     if "application/json" in content_type:
         try:
@@ -259,34 +205,22 @@ def parse_bookings(html: str) -> list[dict]:
     """
     Parse the bookings HTML page and return a list of booking dicts.
 
-    Each dict should contain at minimum:
-      - id:       unique identifier (used to detect duplicates)
-      - name:     customer name
-      - datetime: appointment date/time string
-      - vehicle:  vehicle model/name
-      - phone:    customer phone (if available)
-
     SELECTOR ADJUSTMENT GUIDE
     -------------------------
     1. Open the bookings page in Chrome/Firefox DevTools (F12 → Elements).
-    2. Find the container that holds all booking rows (e.g. a <table>, <ul>, <div>).
+    2. Find the container that holds all booking rows.
     3. Update BOOKING_ROW_SELECTOR to match those rows.
-    4. For each field, update the corresponding selector/attribute below.
-
-    Common patterns to look for:
-      - Table rows:  soup.select("table.bookings tbody tr")
-      - Card divs:   soup.select("div.booking-card")
-      - List items:  soup.select("ul.appointments li")
+    4. Update field selectors in _extract_booking_fields() for name, date, vehicle, phone.
     """
     soup = BeautifulSoup(html, "html.parser")
     bookings = []
 
     # --- ADJUST: selector for individual booking rows/cards ---
     BOOKING_ROW_SELECTOR = (
-        "tr.booking-row, "          # table row variant
-        "div.booking-card, "        # card variant
-        "li.appointment-item, "     # list variant
-        "[data-booking-id]"         # data-attribute variant
+        "tr.booking-row, "
+        "div.booking-card, "
+        "li.appointment-item, "
+        "[data-booking-id]"
     )
 
     rows = soup.select(BOOKING_ROW_SELECTOR)
@@ -316,51 +250,41 @@ def parse_bookings(html: str) -> list[dict]:
 def _extract_booking_fields(row) -> dict | None:
     """
     Extract fields from a single booking row element.
-
-    ADJUST each selector/attribute to match the actual HTML structure.
+    ADJUST each selector to match the actual HTML structure.
     """
-
-    # --- ADJUST: unique booking ID ---
-    # Try data attributes first, then fall back to a visible ID field.
     booking_id = (
         row.get("data-booking-id")
         or row.get("data-id")
         or row.get("id")
     )
     if not booking_id:
-        # Try to find an ID cell
         id_cell = row.select_one(".booking-id, td.id, [data-field='id']")
         booking_id = id_cell.get_text(strip=True) if id_cell else None
 
-    # --- ADJUST: customer name ---
     name_cell = row.select_one(
         ".customer-name, .name, td.name, [data-field='customer'], "
         "[data-field='name'], .client-name"
     )
     name = name_cell.get_text(strip=True) if name_cell else "Unknown"
 
-    # --- ADJUST: appointment date/time ---
     dt_cell = row.select_one(
         ".booking-date, .date, .datetime, td.date, td.datetime, "
         "[data-field='date'], time"
     )
     booking_datetime = dt_cell.get_text(strip=True) if dt_cell else "Unknown"
 
-    # --- ADJUST: vehicle model ---
     vehicle_cell = row.select_one(
         ".vehicle, .car, .model, td.vehicle, td.model, "
         "[data-field='vehicle'], [data-field='model']"
     )
     vehicle = vehicle_cell.get_text(strip=True) if vehicle_cell else "Unknown"
 
-    # --- ADJUST: customer phone (optional) ---
     phone_cell = row.select_one(
         ".phone, .mobile, .contact, td.phone, td.mobile, "
         "[data-field='phone'], [data-field='mobile']"
     )
     phone = phone_cell.get_text(strip=True) if phone_cell else None
 
-    # Generate a fallback ID from content if no explicit ID found
     if not booking_id:
         booking_id = f"{name}-{booking_datetime}-{vehicle}".replace(" ", "_").lower()
         if booking_id == "unknown-unknown-unknown":
@@ -379,19 +303,11 @@ def _extract_booking_fields(row) -> dict | None:
 def parse_bookings_json(data) -> list[dict]:
     """
     Parse bookings from a JSON API response.
-
     ADJUST: Inspect the actual JSON structure and map fields accordingly.
-    `data` may be a list of booking objects or a dict with a nested list.
     """
-    # Common patterns:
-    #   data = [{"id": 1, "customer": "...", ...}, ...]
-    #   data = {"bookings": [...]}
-    #   data = {"data": {"appointments": [...]}}
-
     if isinstance(data, list):
         items = data
     elif isinstance(data, dict):
-        # Try common wrapper keys
         items = (
             data.get("bookings")
             or data.get("appointments")
@@ -400,7 +316,6 @@ def parse_bookings_json(data) -> list[dict]:
             or []
         )
         if isinstance(items, dict):
-            # Nested further — ADJUST as needed
             items = list(items.values())
     else:
         log.warning("Unexpected JSON structure: %s", type(data))
@@ -483,10 +398,11 @@ def check_new_bookings(
 ) -> None:
     """
     Single polling cycle: fetch bookings, find new ones, send alerts.
-    Re-authenticates if the session appears to have expired.
+    Re-authenticates via Playwright if the session appears to have expired.
     """
     bookings = fetch_bookings(session)
 
+    # If we got no bookings, check whether we've been logged out
     if not bookings:
         log.info("No bookings found this cycle (or fetch failed).")
         return
@@ -522,7 +438,6 @@ def main() -> None:
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     poll_interval = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))
 
-    # Validate required env vars
     missing = [
         name
         for name, val in [
@@ -543,10 +458,8 @@ def main() -> None:
 
     log.info("Starting BYD Booking Notifier (poll every %ds).", poll_interval)
 
-    # Load previously seen bookings
     seen: set = load_seen(SEEN_FILE)
 
-    # Create a persistent HTTP session (retains cookies between requests)
     session = requests.Session()
     session.headers.update(
         {
@@ -558,12 +471,10 @@ def main() -> None:
         }
     )
 
-    # Initial login
     if not login(session, username, password):
-        log.error("Initial login failed. Check credentials and VY_LOGIN_URL. Exiting.")
+        log.error("Initial login failed. Check credentials. Exiting.")
         sys.exit(1)
 
-    # Run once immediately before handing off to the scheduler
     check_new_bookings(session, bot_token, chat_id, seen, username, password)
 
     def job():
@@ -571,7 +482,6 @@ def main() -> None:
             check_new_bookings(session, bot_token, chat_id, seen, username, password)
         except Exception as exc:
             log.exception("Unexpected error in polling job: %s", exc)
-            # Attempt to re-login on unexpected errors (session may have expired)
             log.info("Attempting re-login after error…")
             try:
                 login(session, username, password)
