@@ -358,11 +358,47 @@ def _fetch_bookings_via_api(session: requests.Session) -> list[dict]:
 
 
 def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
-    """Navigate the SPA with Playwright, click TEST DRIVES, capture the API call."""
+    """Call the Test Drives DataTables API directly — menuId=899 is the Test Drives section."""
     global _bookings_api_url
-    bookings = []
 
-    log.info("Navigating to TEST DRIVES via browser…")
+    # Build the minimal DataTables request for Test Drives (menuId=899)
+    api_url = f"{VY_BASE_URL}/ajax/datatable/search.php"
+    params = {
+        "menuId": "899", "tab": "0", "stage": "0",
+        "draw": "1", "start": "0", "length": "100",
+        "order[0][column]": "0", "order[0][dir]": "desc",
+        "search[value]": "", "search[regex]": "false",
+        "columns[0][data]": "0", "columns[0][searchable]": "true",
+        "columns[0][orderable]": "true",
+        "columns[0][search][value]": "", "columns[0][search][regex]": "false",
+    }
+    for i in range(1, 8):
+        params.update({
+            f"columns[{i}][data]": str(i),
+            f"columns[{i}][searchable]": "true",
+            f"columns[{i}][orderable]": "false",
+            f"columns[{i}][search][value]": "",
+            f"columns[{i}][search][regex]": "false",
+        })
+
+    try:
+        log.info("Calling Test Drives API directly (menuId=899)…")
+        resp = session.get(api_url, params=params, timeout=20)
+        resp.raise_for_status()
+        data = resp.json()
+        log.info("Test Drives API response keys: %s", list(data.keys()) if isinstance(data, dict) else type(data))
+        _bookings_api_url = resp.url
+        bookings = parse_bookings_json(data)
+        if bookings:
+            return bookings
+        # If empty, log the raw response for debugging
+        log.info("Raw API response (first 500 chars): %s", str(data)[:500])
+    except Exception as exc:
+        log.error("Direct API call failed: %s", exc)
+
+    # Fallback: use Playwright to navigate and capture the real API call
+    log.info("Falling back to browser navigation to find API…")
+    bookings = []
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True)
