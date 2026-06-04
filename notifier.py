@@ -789,7 +789,7 @@ def parse_bookings_json(data) -> list[dict]:
             details_html = row[2] if len(row) > 2 else ""
             fields = _parse_details_html(details_html) if details_html else {}
 
-            # Parse remaining columns for vehicle, datetime, status
+            # Parse remaining columns for vehicle, datetime, status, assigned_to
             for i in range(3, len(row)):
                 cell_html = str(row[i])
                 cell_text = BeautifulSoup(cell_html, "html.parser").get_text(strip=True)
@@ -799,8 +799,13 @@ def parse_bookings_json(data) -> list[dict]:
                     fields["vehicle"] = cell_text
                 elif not fields.get("datetime") and _re.search(r"\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}", cell_text):
                     fields["datetime"] = cell_text
-                elif not fields.get("status") and cell_text.lower() in ("pending", "confirmed", "completed", "cancelled", "new", "active", "done", "scheduled"):
+                elif not fields.get("status") and cell_text.lower() in ("pending", "confirmed", "completed", "cancelled", "new", "active", "done", "scheduled", "booking"):
                     fields["status"] = cell_text
+                elif not fields.get("assigned_to") and "not assigned" in cell_lower:
+                    fields["assigned_to"] = ""  # explicitly unassigned
+                elif not fields.get("assigned_to") and cell_text and len(cell_text) > 3 and len(cell_text) < 50 and " " in cell_text and not _re.search(r"\d", cell_text):
+                    # Looks like a person's name (two words, no digits) — likely assigned consultant
+                    fields["assigned_to"] = cell_text
                 elif not fields.get("email"):
                     import re as _re2
                     m = _re2.search(r"[\w.+-]+@[\w.-]+\.\w+", cell_text)
@@ -822,6 +827,7 @@ def parse_bookings_json(data) -> list[dict]:
                 "phone": fields.get("phone"),
                 "email": fields.get("email", ""),
                 "status": fields.get("status", ""),
+                "assigned_to": fields.get("assigned_to"),
             })
 
         # Legacy dict format fallback
@@ -922,6 +928,13 @@ def check_new_bookings(
         bid = booking["id"]
         if bid in seen:
             log.debug("Already seen booking %s — skipping.", bid)
+            continue
+
+        # Skip bookings already assigned to a consultant
+        assigned = booking.get("assigned_to")
+        if assigned:
+            log.debug("Booking %s already assigned to '%s' — skipping.", bid, assigned)
+            seen.add(bid)
             continue
 
         log.info("New booking detected: %s — raw: %s", bid, booking)
