@@ -431,20 +431,19 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
             }""")
             log.info("Sidebar content after open: %s", sidebar_text[:300])
 
-            # Step 2: Click PROSPECT — try both text variants and partial match
+            # Step 2: Click PROSPECTS to expand submenu
+            # Wait for the sidebar nav items to be rendered
+            try:
+                page.wait_for_selector("text=PROSPECTS", timeout=8_000)
+            except PlaywrightTimeoutError:
+                log.warning("PROSPECTS text not found in DOM after waiting.")
             clicked = page.evaluate("""() => {
                 const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
-                const el = all.find(el => {
-                    const t = el.textContent.trim();
-                    return t === 'PROSPECT' || t === 'PROSPECTS' ||
-                           (t.includes('PROSPECT') && t.length < 20);
-                });
+                const el = all.find(el => el.textContent.trim() === 'PROSPECTS');
                 if (el) { el.click(); return 'clicked: [' + el.tagName + '] ' + el.textContent.trim(); }
-                return 'PROSPECT not found — visible text: ' +
-                    all.filter(e => e.textContent.trim().length > 0 && e.textContent.trim().length < 30)
-                       .map(e => e.textContent.trim()).slice(0, 20).join(' | ');
+                return 'PROSPECTS not found';
             }""")
-            log.info("PROSPECT click: %s", clicked)
+            log.info("PROSPECTS click: %s", clicked)
             page.wait_for_timeout(1_500)
 
             # Step 3: Click TEST DRIVES
