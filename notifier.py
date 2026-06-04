@@ -712,10 +712,13 @@ def _parse_col2(html: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
     result: dict = {}
 
-    # Name from the loadPage anchor
+    # Name and detail page URL from the loadPage anchor
     link = soup.find("a", class_="loadPage")
     if link:
         result["name"] = link.get_text(strip=True)
+        href = link.get("href", "")
+        if href:
+            result["detail_path"] = href if href.startswith("/") else f"/{href}"
 
     # Walk all text nodes to extract labeled values
     full_text = soup.get_text(" ", strip=True)
@@ -819,10 +822,45 @@ def parse_bookings_json(data) -> list[dict]:
             "vehicle": fields.get("vehicle", "Unknown"),
             "datetime": fields.get("datetime", "Unknown"),
             "status": fields.get("status", ""),
+            "detail_path": fields.get("detail_path", ""),
         })
 
     log.info("Parsed %d bookings from API response", len(bookings))
     return bookings
+
+
+def fetch_assigned_to(session: requests.Session, detail_path: str) -> str | None:
+    """Fetch a lead detail page and return the 'Assigned to' value, or None if unassigned/unknown."""
+    if not detail_path:
+        return None
+    url = f"{VY_BASE_URL}{detail_path}"
+    try:
+        resp = session.get(url, timeout=15)
+        if not resp.ok:
+            log.debug("Detail page %s returned %s", url, resp.status_code)
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        # Find label containing "Assigned" then get sibling/next text
+        for tag in soup.find_all(string=lambda t: t and "assigned" in t.lower()):
+            parent = tag.parent
+            # Try the next sibling element for the value
+            sibling = parent.find_next_sibling()
+            if sibling:
+                val = sibling.get_text(strip=True)
+                if val and val.lower() not in ("not assigned", ""):
+                    log.debug("Booking at %s assigned to: %s", detail_path, val)
+                    return val
+                return None  # explicitly "Not Assigned"
+            # Or look for a nearby element with class like "value" / "assigned-to"
+            nxt = parent.find_next(["span", "div", "td", "a"])
+            if nxt:
+                val = nxt.get_text(strip=True)
+                if val and val.lower() not in ("not assigned", ""):
+                    return val
+                return None
+    except requests.RequestException as exc:
+        log.debug("Could not fetch detail page %s: %s", url, exc)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -886,6 +924,13 @@ def check_new_bookings(
         bid = booking["id"]
         if bid in seen:
             log.debug("Already seen booking %s — skipping.", bid)
+            continue
+
+        # Check if already assigned to a consultant
+        assigned_to = fetch_assigned_to(session, booking.get("detail_path", ""))
+        if assigned_to:
+            log.info("Booking %s already assigned to '%s' — skipping.", bid, assigned_to)
+            seen.add(bid)
             continue
 
         log.info("New booking detected: %s — raw: %s", bid, booking)
