@@ -204,6 +204,21 @@ def login(session: requests.Session, username: str, password: str) -> bool:
                     duid_val = page.input_value("#duid") or ""
                     log.info("After scroll — auth: %r, duid: %r", auth_val[:20], duid_val[:20])
 
+            # Log localStorage to see if any auth token exists
+            ls = page.evaluate("() => Object.entries(localStorage)")
+            log.info("localStorage contents: %s", ls)
+
+            # Intercept the login POST response to see what the server actually returns
+            login_responses = []
+            def capture_response(response):
+                if "login" in response.url.lower() and response.request.method == "POST":
+                    try:
+                        body = response.text()
+                        login_responses.append({"status": response.status, "url": response.url, "body": body[:500]})
+                    except Exception:
+                        pass
+            page.on("response", capture_response)
+
             # Take a screenshot just before submitting so we can verify form state
             page.screenshot(path=str(Path(__file__).parent / "pre_submit.png"))
             log.info("Pre-submit screenshot saved.")
@@ -211,10 +226,16 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             # Click submit and wait for either a URL change or the password field to disappear
             page.click("button[type='submit'], input[type='submit']")
             try:
-                # Wait for navigation (URL change) — use 'load' which is more reliable than 'networkidle'
                 page.wait_for_load_state("load", timeout=30_000)
             except PlaywrightTimeoutError:
-                pass  # Some SPAs don't navigate — check the result below instead
+                pass
+
+            # Log what the server responded with
+            if login_responses:
+                for r in login_responses:
+                    log.info("Login POST response [%s] %s: %s", r["status"], r["url"], r["body"])
+            else:
+                log.info("No login POST request captured — form may be submitted via AJAX/fetch")
 
             final_url = page.url
             log.info("Post-login URL: %s", final_url)
