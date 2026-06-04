@@ -123,6 +123,22 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             log.info("Navigating to login page: %s", VY_LOGIN_URL)
             page.goto(VY_LOGIN_URL, wait_until="domcontentloaded", timeout=60_000)
 
+            # Dismiss Terms of Use modal if it appears (site shows this when ToU change)
+            try:
+                tos_modal_btn = page.wait_for_selector(
+                    "button:has-text('Accept'), button:has-text('agree'), "
+                    "button:has-text('Continue'), button:has-text('OK'), "
+                    "a:has-text('Accept'), a:has-text('agree'), "
+                    ".modal button, .modal-footer button",
+                    timeout=5_000,
+                )
+                if tos_modal_btn:
+                    log.info("Terms of Use modal detected — accepting.")
+                    tos_modal_btn.click()
+                    page.wait_for_selector(".modal", state="hidden", timeout=5_000)
+            except PlaywrightTimeoutError:
+                pass  # No modal, continue
+
             # Wait for the username input to be ready
             page.wait_for_selector("input[name='login'], input[name='username']", timeout=20_000)
 
@@ -131,10 +147,10 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             page.fill(username_sel, username)
             page.fill("input[name='password']", password)
 
-            # Check the Terms of Use checkbox if present and not already checked
-            tos = page.query_selector("input[type='checkbox']")
-            if tos and not tos.is_checked():
-                tos.check()
+            # Check the Terms of Use checkbox on the login form if present
+            tos_checkbox = page.query_selector("input[type='checkbox']")
+            if tos_checkbox and not tos_checkbox.is_checked():
+                tos_checkbox.check()
 
             # Click submit and wait for either a URL change or the password field to disappear
             page.click("button[type='submit'], input[type='submit']")
