@@ -342,12 +342,12 @@ def fetch_bookings(session: requests.Session) -> list[dict]:
 
 def _fetch_bookings_via_api(session: requests.Session) -> list[dict]:
     """Call the cached bookings API endpoint directly."""
+    global _bookings_api_url
     try:
         log.info("Polling bookings API: %s", _bookings_api_url)
         resp = session.get(_bookings_api_url, timeout=20)
         if resp.status_code in (401, 403):
             log.warning("Session expired (HTTP %s) — will re-navigate next cycle.", resp.status_code)
-            global _bookings_api_url
             _bookings_api_url = None
             return []
         resp.raise_for_status()
