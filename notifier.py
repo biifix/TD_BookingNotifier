@@ -802,18 +802,29 @@ def parse_bookings_json(data) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
+def _he(text: str) -> str:
+    """Escape special HTML characters for Telegram HTML parse mode."""
+    return (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
 def format_booking_message(booking: dict) -> str:
     """Format a booking dict into a Telegram message."""
-    phone_line = f"\n📞 Phone: {booking['phone']}" if booking.get("phone") else ""
-    email_line = f"\n✉️ Email: {booking['email']}" if booking.get("email") else ""
-    status_line = f"\n📋 Status: {booking['status']}" if booking.get("status") else ""
+    phone_line = f"\n📞 Phone: {_he(booking['phone'])}" if booking.get("phone") else ""
+    email_line = f"\n✉️ Email: {_he(booking['email'])}" if booking.get("email") else ""
+    status_line = f"\n📋 Status: {_he(booking['status'])}" if booking.get("status") else ""
     return (
         f"🚗 <b>New Test Drive Booking!</b>\n"
-        f"🆔 ID: {booking['id']}\n"
-        f"👤 Customer: {booking['name']}"
+        f"🆔 ID: {_he(booking['id'])}\n"
+        f"👤 Customer: {_he(booking['name'])}"
         f"{phone_line}{email_line}\n"
-        f"📅 Date/Time: {booking['datetime']}\n"
-        f"🚙 Vehicle: {booking['vehicle']}"
+        f"📅 Date/Time: {_he(booking['datetime'])}\n"
+        f"🚙 Vehicle: {_he(booking['vehicle'])}"
         f"{status_line}"
     )
 
@@ -910,7 +921,17 @@ def main() -> None:
         log.error("Initial login failed. Check credentials. Exiting.")
         sys.exit(1)
 
-    check_new_bookings(session, bot_token, chat_id, seen, username, password)
+    # On first run (no seen file), seed with all existing bookings so we only
+    # alert for truly new ones going forward — don't flood with history.
+    if not os.path.exists(SEEN_FILE):
+        log.info("First run — seeding existing bookings (no alerts will be sent for these).")
+        existing = fetch_bookings(session)
+        for b in existing:
+            seen.add(b["id"])
+        save_seen(SEEN_FILE, seen)
+        log.info("Seeded %d existing booking IDs. Future new bookings will trigger alerts.", len(seen))
+    else:
+        check_new_bookings(session, bot_token, chat_id, seen, username, password)
 
     def job():
         try:
