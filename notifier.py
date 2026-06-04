@@ -627,65 +627,160 @@ def _extract_booking_fields(row) -> dict | None:
     }
 
 
+def _parse_details_html(html: str) -> dict:
+    """Extract name, email, phone, vehicle, datetime, status from a DataTables details cell."""
+    soup = BeautifulSoup(html, "html.parser")
+    result: dict = {}
+
+    # The main link often contains customer name
+    main_link = soup.find("a", class_="loadPage")
+    if main_link:
+        result["name"] = main_link.get_text(separator=" ", strip=True)
+
+    # Look for labeled spans/divs like <span class="...">Name</span>
+    for tag in soup.find_all(["span", "div", "p", "td", "li"]):
+        text = tag.get_text(strip=True)
+        lower = text.lower()
+        if not text:
+            continue
+        # Try sibling/parent text as label for the next element
+        if "name" in lower and not result.get("name") and len(text) > 4:
+            result["name"] = text
+        elif any(k in lower for k in ("@", "email")) and not result.get("email"):
+            # pull out email-looking token
+            import re as _re
+            m = _re.search(r"[\w.+-]+@[\w.-]+\.\w+", text)
+            if m:
+                result["email"] = m.group()
+        elif any(k in lower for k in ("phone", "mobile", "tel")) and not result.get("phone"):
+            import re as _re
+            m = _re.search(r"[\d\s\+\-\(\)]{7,}", text)
+            if m:
+                result["phone"] = m.group().strip()
+
+    # Vehicle: look for BYD model keywords or a "vehicle" label
+    for tag in soup.find_all(["span", "div", "a", "td"]):
+        text = tag.get_text(strip=True)
+        lower = text.lower()
+        if any(v in lower for v in ("byd", "atto", "seal", "han", "tang", "dolphin", "sealion", "shark")) and not result.get("vehicle"):
+            result["vehicle"] = text
+            break
+
+    # Datetime: look for date-like patterns
+    import re as _re
+    full_text = soup.get_text(" ", strip=True)
+    dt_match = _re.search(r"\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}(?:\s+\d{1,2}:\d{2}(?:\s*[APap][Mm])?)?", full_text)
+    if dt_match and not result.get("datetime"):
+        result["datetime"] = dt_match.group()
+
+    # Status: last meaningful text token that looks like a status
+    status_keywords = ("pending", "confirmed", "completed", "cancelled", "new", "active", "done", "scheduled")
+    for tag in soup.find_all(["span", "div", "td", "badge", "label"]):
+        text = tag.get_text(strip=True).lower()
+        if text in status_keywords and not result.get("status"):
+            result["status"] = tag.get_text(strip=True)
+
+    return result
+
+
 def parse_bookings_json(data) -> list[dict]:
-    """Parse bookings from a Virtual Yard API JSON response."""
-    if isinstance(data, list):
+    """Parse bookings from a Virtual Yard DataTables API JSON response.
+
+    The API returns {"data": [row, ...]} where each row is a list of HTML strings:
+      row[0]  — booking ID (plain string)
+      row[1]  — photo HTML (<a class="listphoto ...">)
+      row[2]  — details HTML (<a class="loadPage ..."> with customer info)
+      row[3+] — additional columns (vehicle, datetime, status, etc.)
+    """
+    if isinstance(data, dict):
+        items = data.get("data") or []
+    elif isinstance(data, list):
         items = data
-    elif isinstance(data, dict):
-        items = (
-            data.get("records") or data.get("rows")
-            or data.get("bookings") or data.get("appointments")
-            or data.get("data") or data.get("results") or []
-        )
-        if isinstance(items, dict):
-            items = list(items.values())
     else:
         log.warning("Unexpected JSON structure: %s", type(data))
         return []
 
-    if not items and isinstance(data, dict):
-        log.debug("API returned empty list. Response keys: %s", list(data.keys()))
+    if not items:
+        log.debug("API returned empty list. Response keys: %s", list(data.keys()) if isinstance(data, dict) else "n/a")
+        return []
 
     bookings = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        booking_id = (
-            item.get("id") or item.get("testdriveId") or item.get("prospectId")
-            or item.get("booking_id") or item.get("appointmentId")
-        )
-        name = (
-            item.get("customerName") or item.get("customer_name")
-            or item.get("name") or item.get("customer")
-            or f"{item.get('firstName', '')} {item.get('lastName', '')}".strip()
-            or "Unknown"
-        )
-        booking_datetime = (
-            item.get("appointmentDate") or item.get("appointment_date")
-            or item.get("date") or item.get("datetime")
-            or item.get("scheduled_at") or item.get("startDate") or "Unknown"
-        )
-        vehicle = (
-            item.get("vehicleName") or item.get("vehicle_name")
-            or item.get("vehicle") or item.get("model") or item.get("car") or "Unknown"
-        )
-        phone = item.get("phone") or item.get("mobile") or item.get("mobileNumber") or item.get("contact_number")
-        email = item.get("email") or item.get("emailAddress") or ""
-        status = item.get("status") or item.get("bookingStatus") or ""
+    for row in items:
+        # DataTables array-of-arrays format
+        if isinstance(row, list):
+            booking_id = str(row[0]).strip() if row else ""
+            details_html = row[2] if len(row) > 2 else ""
+            fields = _parse_details_html(details_html) if details_html else {}
 
-        if not booking_id:
-            booking_id = f"{name}-{booking_datetime}".lower().replace(" ", "_")
+            # Parse remaining columns for vehicle, datetime, status
+            for i in range(3, len(row)):
+                cell_html = str(row[i])
+                cell_text = BeautifulSoup(cell_html, "html.parser").get_text(strip=True)
+                cell_lower = cell_text.lower()
+                import re as _re
+                if not fields.get("vehicle") and any(v in cell_lower for v in ("byd", "atto", "seal", "han", "tang", "dolphin", "sealion", "shark")):
+                    fields["vehicle"] = cell_text
+                elif not fields.get("datetime") and _re.search(r"\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}", cell_text):
+                    fields["datetime"] = cell_text
+                elif not fields.get("status") and cell_text.lower() in ("pending", "confirmed", "completed", "cancelled", "new", "active", "done", "scheduled"):
+                    fields["status"] = cell_text
+                elif not fields.get("email"):
+                    import re as _re2
+                    m = _re2.search(r"[\w.+-]+@[\w.-]+\.\w+", cell_text)
+                    if m:
+                        fields["email"] = m.group()
+                elif not fields.get("phone"):
+                    m = _re.search(r"[\d\s\+\-\(\)]{7,}", cell_text)
+                    if m and any(c.isdigit() for c in m.group()):
+                        fields["phone"] = m.group().strip()
 
-        bookings.append({
-            "id": str(booking_id),
-            "name": name,
-            "datetime": booking_datetime,
-            "vehicle": vehicle,
-            "phone": phone,
-            "email": email,
-            "status": status,
-        })
+            if not booking_id:
+                booking_id = f"{fields.get('name','unknown')}-{fields.get('datetime','unknown')}".lower().replace(" ", "_")
 
+            bookings.append({
+                "id": booking_id,
+                "name": fields.get("name", "Unknown"),
+                "datetime": fields.get("datetime", "Unknown"),
+                "vehicle": fields.get("vehicle", "Unknown"),
+                "phone": fields.get("phone"),
+                "email": fields.get("email", ""),
+                "status": fields.get("status", ""),
+            })
+
+        # Legacy dict format fallback
+        elif isinstance(row, dict):
+            booking_id = (
+                row.get("id") or row.get("testdriveId") or row.get("prospectId")
+                or row.get("booking_id") or row.get("appointmentId")
+            )
+            name = (
+                row.get("customerName") or row.get("customer_name")
+                or row.get("name") or row.get("customer")
+                or f"{row.get('firstName', '')} {row.get('lastName', '')}".strip()
+                or "Unknown"
+            )
+            booking_datetime = (
+                row.get("appointmentDate") or row.get("appointment_date")
+                or row.get("date") or row.get("datetime")
+                or row.get("scheduled_at") or row.get("startDate") or "Unknown"
+            )
+            vehicle = (
+                row.get("vehicleName") or row.get("vehicle_name")
+                or row.get("vehicle") or row.get("model") or row.get("car") or "Unknown"
+            )
+            if not booking_id:
+                booking_id = f"{name}-{booking_datetime}".lower().replace(" ", "_")
+            bookings.append({
+                "id": str(booking_id),
+                "name": name,
+                "datetime": booking_datetime,
+                "vehicle": vehicle,
+                "phone": row.get("phone") or row.get("mobile"),
+                "email": row.get("email") or row.get("emailAddress") or "",
+                "status": row.get("status") or row.get("bookingStatus") or "",
+            })
+
+    log.info("Parsed %d bookings from API response", len(bookings))
     return bookings
 
 
