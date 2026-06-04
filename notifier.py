@@ -420,31 +420,42 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
                     return 'hamburger not found';
                 }""")
                 log.info("Hamburger clicked: %s", opened)
-                page.wait_for_timeout(2_000)
+                page.wait_for_timeout(2_500)
 
-            # Step 2: Click PROSPECTS to expand submenu
-            # Wait for the sidebar nav items to be rendered
-            try:
-                page.wait_for_selector("text=PROSPECTS", timeout=8_000)
-            except PlaywrightTimeoutError:
-                log.warning("PROSPECTS text not found in DOM after waiting.")
-            clicked = page.evaluate("""() => {
-                const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
-                const el = all.find(el => el.textContent.trim() === 'PROSPECTS');
-                if (el) { el.click(); return 'clicked: [' + el.tagName + '] ' + el.textContent.trim(); }
-                return 'PROSPECTS not found';
+            # Dump all nav links to find TEST DRIVES href/menuId
+            nav_links = page.evaluate("""() => {
+                return Array.from(document.querySelectorAll('a[href], [onclick], [data-menu]'))
+                    .filter(el => el.textContent.trim().length > 0 && el.textContent.trim().length < 40)
+                    .map(el => ({
+                        tag: el.tagName,
+                        text: el.textContent.trim(),
+                        href: el.getAttribute('href') || '',
+                        onclick: el.getAttribute('onclick') || '',
+                        dataMenu: el.getAttribute('data-menu') || el.getAttribute('data-id') || ''
+                    }))
+                    .filter(x => x.href || x.onclick || x.dataMenu);
             }""")
-            log.info("PROSPECTS click: %s", clicked)
-            page.wait_for_timeout(1_500)
+            log.info("Nav links found: %s", nav_links[:30])
 
-            # Step 3: Click TEST DRIVES
-            clicked2 = page.evaluate("""() => {
+            # Find and click the TEST DRIVES link directly by href/onclick
+            td_clicked = page.evaluate("""() => {
                 const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
-                const el = all.find(el => el.textContent.trim() === 'TEST DRIVES');
-                if (el) { el.click(); return 'clicked: [' + el.tagName + '] ' + el.textContent.trim(); }
-                return 'TEST DRIVES not found';
+                // Look for TEST DRIVES by text anywhere in the DOM
+                const el = all.find(el => {
+                    const t = el.textContent.trim().toUpperCase();
+                    return t === 'TEST DRIVES' || t === 'TESTDRIVES';
+                });
+                if (el) {
+                    el.scrollIntoView();
+                    el.click();
+                    return 'clicked TEST DRIVES: ' + el.outerHTML.substring(0, 100);
+                }
+                // Log all text nodes to debug
+                const texts = all.map(e => e.textContent.trim())
+                                 .filter(t => t.length > 2 && t.length < 25);
+                return 'not found. visible texts: ' + [...new Set(texts)].slice(0,30).join(' | ');
             }""")
-            log.info("TEST DRIVES click: %s", clicked2)
+            log.info("TEST DRIVES direct click: %s", td_clicked[:300])
             log.info("Waiting for bookings data to load…")
             page.wait_for_timeout(6_000)
 
