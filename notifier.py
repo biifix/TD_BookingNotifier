@@ -126,20 +126,39 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             # Wait for the login form to be ready
             page.wait_for_selector("input[name='login'], input[name='username']", timeout=20_000)
 
-            # Fill credentials first
+            # If the ToU alert is visible, click the "Terms of Use" link to visit the page,
+            # then come back — the site requires you to read the ToU before it allows login.
+            tos_alert = page.query_selector(".alert, .alert-info, .alert-warning, .alert-success")
+            if tos_alert and tos_alert.is_visible() and "Terms of Use" in (tos_alert.inner_text() or ""):
+                log.info("ToU alert visible — clicking 'Terms of Use' link to visit the page.")
+                tos_link = page.query_selector("a:has-text('Terms of Use')")
+                if tos_link:
+                    # The link may open in a new tab — handle both cases
+                    with context.expect_page(timeout=8_000) as new_page_info:
+                        tos_link.click()
+                    try:
+                        tos_page = new_page_info.value
+                        tos_page.wait_for_load_state("domcontentloaded", timeout=15_000)
+                        log.info("ToU page opened: %s — closing and returning to login.", tos_page.url)
+                        tos_page.close()
+                    except Exception:
+                        # Link navigated in the same tab — go back
+                        log.info("ToU opened in same tab (%s) — going back.", page.url)
+                        page.go_back(wait_until="domcontentloaded", timeout=15_000)
+                        page.wait_for_selector("input[name='login'], input[name='username']", timeout=10_000)
+                    page.wait_for_timeout(1_000)
+
+            # Fill credentials
             username_sel = "input[name='login']" if page.query_selector("input[name='login']") else "input[name='username']"
             page.fill(username_sel, username)
             page.fill("input[name='password']", password)
 
-            # Check the "I have read Terms of Use" checkbox — required before Sign in
+            # Check the "I have read Terms of Use" checkbox
             tos_checkbox = page.query_selector("input[type='checkbox']")
-            if tos_checkbox:
-                if not tos_checkbox.is_checked():
-                    log.info("Checking the 'I have read Terms of Use' checkbox.")
-                    tos_checkbox.check()
-                    page.wait_for_timeout(500)  # let the ToU alert dismiss
-                else:
-                    log.info("ToU checkbox already checked.")
+            if tos_checkbox and not tos_checkbox.is_checked():
+                log.info("Checking the 'I have read Terms of Use' checkbox.")
+                tos_checkbox.check()
+                page.wait_for_timeout(500)
 
             # Click submit and wait for either a URL change or the password field to disappear
             page.click("button[type='submit'], input[type='submit']")
