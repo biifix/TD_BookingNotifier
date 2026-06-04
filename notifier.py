@@ -398,23 +398,51 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
             page.goto(dealer_url, wait_until="domcontentloaded", timeout=30_000)
             page.wait_for_timeout(2_000)
 
-            # Click PROSPECTS to expand, then TEST DRIVES — use JS click to bypass viewport issues
-            clicked = page.evaluate("""() => {
-                const all = Array.from(document.querySelectorAll('a, li, span, div'));
-                const prospects = all.find(el => el.textContent.trim() === 'PROSPECTS');
-                if (prospects) { prospects.click(); return 'clicked prospects'; }
-                return 'prospects not found';
+            # Step 1: Open the sidebar by clicking the hamburger menu (≡) button
+            opened = page.evaluate("""() => {
+                // Look for the hamburger/menu toggle button
+                const btn = document.querySelector(
+                    '.navbar-toggler, .sidebar-toggle, button.menu, ' +
+                    '[data-toggle="sidebar"], [data-target="#sidebar"], ' +
+                    '.hamburger, button[class*="toggle"], button[class*="menu"]'
+                );
+                if (btn) { btn.click(); return 'opened menu: ' + btn.className; }
+                // Fallback: find any ≡ or burger icon button
+                const all = Array.from(document.querySelectorAll('button, a, i, span'));
+                const burger = all.find(el => {
+                    const cls = (el.className || '').toLowerCase();
+                    const txt = el.textContent.trim();
+                    return cls.includes('burger') || cls.includes('toggle') ||
+                           cls.includes('bars') || txt === '☰' || txt === '≡';
+                });
+                if (burger) { burger.click(); return 'opened via fallback: ' + burger.className; }
+                return 'menu button not found';
             }""")
-            log.info("Sidebar click result: %s", clicked)
+            log.info("Hamburger menu: %s", opened)
             page.wait_for_timeout(1_500)
 
+            # Step 2: Click PROSPECT to expand submenu
+            clicked = page.evaluate("""() => {
+                const all = Array.from(document.querySelectorAll('a, li, span, div'));
+                // Match exact text 'PROSPECT' (not PROSPECTS)
+                const el = all.find(el =>
+                    el.textContent.trim() === 'PROSPECT' ||
+                    el.textContent.trim() === 'PROSPECTS'
+                );
+                if (el) { el.click(); return 'clicked: ' + el.textContent.trim(); }
+                return 'PROSPECT not found';
+            }""")
+            log.info("PROSPECT click: %s", clicked)
+            page.wait_for_timeout(1_000)
+
+            # Step 3: Click TEST DRIVES in the expanded submenu
             clicked2 = page.evaluate("""() => {
                 const all = Array.from(document.querySelectorAll('a, li, span, div'));
-                const td = all.find(el => el.textContent.trim() === 'TEST DRIVES');
-                if (td) { td.click(); return 'clicked test drives'; }
-                return 'test drives not found';
+                const el = all.find(el => el.textContent.trim() === 'TEST DRIVES');
+                if (el) { el.click(); return 'clicked: ' + el.textContent.trim(); }
+                return 'TEST DRIVES not found';
             }""")
-            log.info("TEST DRIVES click result: %s", clicked2)
+            log.info("TEST DRIVES click: %s", clicked2)
             log.info("Waiting for bookings data to load…")
             page.wait_for_timeout(5_000)
 
