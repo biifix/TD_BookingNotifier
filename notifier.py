@@ -182,6 +182,28 @@ def login(session: requests.Session, username: str, password: str) -> bool:
                 tos_checkbox.check()
                 page.wait_for_timeout(500)
 
+            # Check hidden auth/duid fields populated by JS — if empty, wait for JS to run
+            auth_val = page.input_value("#auth") or ""
+            duid_val = page.input_value("#duid") or ""
+            log.info("Hidden fields — auth: %r, duid: %r", auth_val[:20] if auth_val else "", duid_val[:20] if duid_val else "")
+            if not auth_val or not duid_val:
+                log.info("auth/duid not yet set — waiting for JS to populate them (up to 10s)…")
+                for _ in range(20):
+                    page.wait_for_timeout(500)
+                    auth_val = page.input_value("#auth") or ""
+                    duid_val = page.input_value("#duid") or ""
+                    if auth_val and duid_val:
+                        log.info("auth/duid now populated: auth=%r duid=%r", auth_val[:20], duid_val[:20])
+                        break
+                else:
+                    log.warning("auth/duid still empty after 10s — JS may need a page interaction to trigger.")
+                    # Try scrolling or moving mouse to trigger lazy JS
+                    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    page.wait_for_timeout(1_000)
+                    auth_val = page.input_value("#auth") or ""
+                    duid_val = page.input_value("#duid") or ""
+                    log.info("After scroll — auth: %r, duid: %r", auth_val[:20], duid_val[:20])
+
             # Take a screenshot just before submitting so we can verify form state
             page.screenshot(path=str(Path(__file__).parent / "pre_submit.png"))
             log.info("Pre-submit screenshot saved.")
