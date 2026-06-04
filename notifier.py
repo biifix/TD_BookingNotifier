@@ -383,9 +383,11 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
             api_responses = []
             def capture(response):
                 url = response.url
+                if "google" in url.lower() or "maps" in url.lower() or "analytics" in url.lower():
+                    return
                 if ("test" in url.lower() or "drive" in url.lower() or
                         "prospect" in url.lower() or "appointment" in url.lower() or
-                        "booking" in url.lower()):
+                        "booking" in url.lower() or "ajax" in url.lower()):
                     try:
                         data = response.json()
                         api_responses.append((url, data))
@@ -419,32 +421,42 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
                 return 'menu button not found';
             }""")
             log.info("Hamburger menu: %s", opened)
-            page.wait_for_timeout(1_500)
+            # Wait for sidebar to fully render
+            page.wait_for_timeout(2_500)
 
-            # Step 2: Click PROSPECT to expand submenu
+            # Debug: log all visible sidebar text to see what's in the menu
+            sidebar_text = page.evaluate("""() => {
+                const nav = document.querySelector('nav, .sidebar, .left-panel, #sidebar, [class*="sidebar"], [class*="nav"]');
+                return nav ? nav.innerText : document.body.innerText.substring(0, 500);
+            }""")
+            log.info("Sidebar content after open: %s", sidebar_text[:300])
+
+            # Step 2: Click PROSPECT — try both text variants and partial match
             clicked = page.evaluate("""() => {
-                const all = Array.from(document.querySelectorAll('a, li, span, div'));
-                // Match exact text 'PROSPECT' (not PROSPECTS)
-                const el = all.find(el =>
-                    el.textContent.trim() === 'PROSPECT' ||
-                    el.textContent.trim() === 'PROSPECTS'
-                );
-                if (el) { el.click(); return 'clicked: ' + el.textContent.trim(); }
-                return 'PROSPECT not found';
+                const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
+                const el = all.find(el => {
+                    const t = el.textContent.trim();
+                    return t === 'PROSPECT' || t === 'PROSPECTS' ||
+                           (t.includes('PROSPECT') && t.length < 20);
+                });
+                if (el) { el.click(); return 'clicked: [' + el.tagName + '] ' + el.textContent.trim(); }
+                return 'PROSPECT not found — visible text: ' +
+                    all.filter(e => e.textContent.trim().length > 0 && e.textContent.trim().length < 30)
+                       .map(e => e.textContent.trim()).slice(0, 20).join(' | ');
             }""")
             log.info("PROSPECT click: %s", clicked)
-            page.wait_for_timeout(1_000)
+            page.wait_for_timeout(1_500)
 
-            # Step 3: Click TEST DRIVES in the expanded submenu
+            # Step 3: Click TEST DRIVES
             clicked2 = page.evaluate("""() => {
-                const all = Array.from(document.querySelectorAll('a, li, span, div'));
+                const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
                 const el = all.find(el => el.textContent.trim() === 'TEST DRIVES');
-                if (el) { el.click(); return 'clicked: ' + el.textContent.trim(); }
+                if (el) { el.click(); return 'clicked: [' + el.tagName + '] ' + el.textContent.trim(); }
                 return 'TEST DRIVES not found';
             }""")
             log.info("TEST DRIVES click: %s", clicked2)
             log.info("Waiting for bookings data to load…")
-            page.wait_for_timeout(5_000)
+            page.wait_for_timeout(6_000)
 
             # Refresh cookies back into requests.Session
             for cookie in context.cookies():
