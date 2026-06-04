@@ -440,53 +440,53 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
             ss("1_after_login")
             log.info("Screenshot: debug_1_after_login.png")
 
-            # Step 1: Open sidebar only if PROSPECTS is not already visible
-            prospects_visible = page.evaluate("""() => {
-                const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
-                const el = all.find(el => el.textContent.trim() === 'PROSPECTS');
-                if (!el) return false;
-                const r = el.getBoundingClientRect();
-                return r.width > 0 && r.height > 0;
-            }""")
-            log.info("PROSPECTS visible before hamburger: %s", prospects_visible)
-
-            if not prospects_visible:
-                opened = page.evaluate("""() => {
-                    const btn = document.querySelector(
-                        '.navbar-toggle, .hamburger, .sidebar-toggle, ' +
-                        '[data-toggle="sidebar"], button[class*="toggle"]'
-                    );
-                    if (btn) { btn.click(); return 'clicked: ' + btn.className; }
-                    return 'hamburger not found';
+            # Step 1: Open sidebar — keep clicking hamburger until back-arrow (←) appears
+            # The hamburger toggle button text is "Toggle menubar"
+            hamburger = page.locator("a:has-text('Toggle menubar'), .navbar-toggle, .hamburger").first
+            for attempt in range(4):
+                # Check if sidebar is open: back-arrow button appears, or PROSPECTS is visible
+                sidebar_open = page.evaluate("""() => {
+                    const backArrow = document.querySelector('.navbar-toggle.unfolded:not(.hided), a.back-arrow, [class*="back"]');
+                    const prospects = Array.from(document.querySelectorAll('*'))
+                        .find(el => el.textContent.includes('PROSPECTS') && el.getBoundingClientRect().width > 0);
+                    // Check if sidebar menu is unfolded by looking at body/wrapper class
+                    const body = document.body.className;
+                    const sidebar = document.querySelector('.site-sidebar, #sidebar, nav.site-menu');
+                    const sidebarVisible = sidebar && sidebar.getBoundingClientRect().width > 50;
+                    return { sidebarVisible, bodyClass: body.substring(0, 80), prospectsFound: !!prospects };
                 }""")
-                log.info("Hamburger clicked: %s", opened)
-                page.wait_for_timeout(2_500)
-                ss("2_after_hamburger")
-                log.info("Screenshot: debug_2_after_hamburger.png")
+                log.info("Sidebar state (attempt %d): %s", attempt + 1, sidebar_open)
+                ss(f"sidebar_attempt_{attempt + 1}")
 
-            # Dump all nav links to find TEST DRIVES href/menuId
-            nav_links = page.evaluate("""() => {
-                return Array.from(document.querySelectorAll('a[href], [onclick], [data-menu]'))
-                    .filter(el => el.textContent.trim().length > 0 && el.textContent.trim().length < 40)
-                    .map(el => ({
-                        tag: el.tagName,
-                        text: el.textContent.trim(),
-                        href: el.getAttribute('href') || '',
-                        onclick: el.getAttribute('onclick') || '',
-                        dataMenu: el.getAttribute('data-menu') || el.getAttribute('data-id') || ''
-                    }))
-                    .filter(x => x.href || x.onclick || x.dataMenu);
-            }""")
-            log.info("Nav links found: %s", nav_links[:30])
+                if sidebar_open.get("prospectsFound") or sidebar_open.get("sidebarVisible"):
+                    log.info("Sidebar is open.")
+                    break
 
-            # Click PROSPECTS to expand submenu
-            p_clicked = page.evaluate("""() => {
-                const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
-                const el = all.find(el => el.textContent.trim() === 'PROSPECTS');
-                if (el) { el.scrollIntoView(); el.click(); return 'clicked PROSPECTS'; }
-                return 'PROSPECTS not found';
-            }""")
-            log.info("PROSPECTS click: %s", p_clicked)
+                log.info("Sidebar not open yet — clicking hamburger (attempt %d)…", attempt + 1)
+                try:
+                    hamburger.click(force=True, timeout=5_000)
+                except Exception:
+                    page.evaluate("document.querySelector('.navbar-toggle, .hamburger, a[href=\"#\"]').click()")
+                page.wait_for_timeout(2_000)
+            else:
+                log.warning("Could not confirm sidebar open after 4 attempts.")
+
+            ss("2_after_hamburger")
+            log.info("Screenshot: debug_2_after_hamburger.png")
+
+            # Step 2: Click PROSPECTS using Playwright native text locator (handles icons in text)
+            try:
+                page.locator("text=PROSPECTS").first.click(force=True, timeout=5_000)
+                log.info("PROSPECTS clicked via Playwright locator.")
+            except Exception:
+                # Fallback: JS contains-based match
+                r = page.evaluate("""() => {
+                    const el = Array.from(document.querySelectorAll('li, a, div, span'))
+                        .find(el => el.textContent.includes('PROSPECTS') && !el.textContent.includes('TEST'));
+                    if (el) { el.click(); return 'clicked via JS: ' + el.textContent.trim().substring(0, 30); }
+                    return 'not found';
+                }""")
+                log.info("PROSPECTS JS fallback: %s", r)
             page.wait_for_timeout(1_500)
             ss("3_after_prospects")
             log.info("Screenshot: debug_3_after_prospects.png")
