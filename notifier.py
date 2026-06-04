@@ -303,6 +303,46 @@ def login(session: requests.Session, username: str, password: str) -> bool:
                     domain=cookie.get("domain", "").lstrip("."),
                 )
 
+            # One-time debug: capture test drive detail screenshot if not done yet
+            debug5_path = Path(__file__).parent / "debug_5_test_drive_detail.png"
+            if not debug5_path.exists():
+                try:
+                    log.info("Capturing debug_5: navigating to TEST DRIVES detail view…")
+                    dealer_url = f"{VY_BASE_URL}{VY_DEALER_PATH}/"
+                    page.goto(dealer_url, wait_until="networkidle", timeout=15_000)
+                    page.wait_for_timeout(2_000)
+
+                    # Open sidebar and click PROSPECTS → TEST DRIVES
+                    body_class = page.evaluate("() => document.body.className")
+                    if "site-menubar-hide" in body_class or "site-menubar-fold" in body_class:
+                        page.locator(".site-menu-toggle, .hamburger, [data-toggle='site-menubar']").first.click()
+                        page.wait_for_timeout(1_500)
+
+                    page.evaluate("""() => {
+                        const el = Array.from(document.querySelectorAll('a,li,span,div'))
+                            .find(e => e.textContent.trim().toUpperCase() === 'PROSPECTS');
+                        if (el) { el.scrollIntoView(); el.click(); }
+                    }""")
+                    page.wait_for_timeout(1_500)
+
+                    page.evaluate("""() => {
+                        const el = Array.from(document.querySelectorAll('a,li,span,div,button'))
+                            .find(e => e.textContent.trim().toUpperCase() === 'TEST DRIVES');
+                        if (el) { el.scrollIntoView(); el.click(); }
+                    }""")
+                    page.wait_for_timeout(6_000)
+
+                    # Click the first customer link to open the detail view
+                    first_link = page.locator("a.loadPage").first
+                    first_link.wait_for(timeout=8_000)
+                    first_link.click()
+                    page.wait_for_load_state("networkidle", timeout=10_000)
+                    page.wait_for_timeout(2_000)
+                    page.screenshot(path=str(debug5_path), full_page=True)
+                    log.info("Screenshot saved: debug_5_test_drive_detail.png")
+                except Exception as e:
+                    log.warning("debug_5 screenshot failed: %s", e)
+
             browser.close()
 
     except PlaywrightTimeoutError as exc:
