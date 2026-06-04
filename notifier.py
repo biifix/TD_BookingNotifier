@@ -208,16 +208,26 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             ls = page.evaluate("() => Object.entries(localStorage)")
             log.info("localStorage contents: %s", ls)
 
-            # Intercept ALL POST/XHR responses after submit to find the login AJAX call
-            login_responses = []
-            def capture_response(response):
-                if response.request.method in ("POST", "PUT") or "login" in response.url.lower() or "auth" in response.url.lower():
-                    try:
-                        body = response.text()
-                        login_responses.append({"status": response.status, "url": response.url, "method": response.request.method, "body": body[:800]})
-                    except Exception:
-                        pass
-            page.on("response", capture_response)
+            # Monkey-patch window.fetch and XMLHttpRequest BEFORE clicking submit
+            # so we can see exactly what URL and payload the JS sends
+            page.evaluate("""() => {
+                window._fetchLog = [];
+                const origFetch = window.fetch;
+                window.fetch = function(url, opts) {
+                    window._fetchLog.push({url: String(url), method: (opts||{}).method||'GET', body: String((opts||{}).body||'')});
+                    return origFetch.apply(this, arguments);
+                };
+                const origOpen = XMLHttpRequest.prototype.open;
+                const origSend = XMLHttpRequest.prototype.send;
+                XMLHttpRequest.prototype.open = function(method, url) {
+                    this._logUrl = url; this._logMethod = method;
+                    return origOpen.apply(this, arguments);
+                };
+                XMLHttpRequest.prototype.send = function(body) {
+                    window._fetchLog.push({url: this._logUrl, method: this._logMethod, body: String(body||'')});
+                    return origSend.apply(this, arguments);
+                };
+            }""")
 
             # Take a screenshot just before submitting so we can verify form state
             page.screenshot(path=str(Path(__file__).parent / "pre_submit.png"))
@@ -233,21 +243,13 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             # Give AJAX a moment to complete
             page.wait_for_timeout(2_000)
 
-            # Log what the server responded with
-            if login_responses:
-                for r in login_responses:
-                    log.info("AJAX [%s %s %s]: %s", r["method"], r["status"], r["url"], r["body"])
+            # Read what fetch/XHR calls were made
+            fetch_log = page.evaluate("() => window._fetchLog || []")
+            if fetch_log:
+                for entry in fetch_log:
+                    log.info("JS network call: %s %s  body: %s", entry["method"], entry["url"], entry["body"][:300])
             else:
-                log.info("No POST/auth responses captured — checking all XHR via JS evaluation")
-                # Last resort: use JS to manually submit and capture response
-                result = page.evaluate("""async () => {
-                    const form = document.querySelector('form');
-                    if (!form) return 'no form';
-                    const data = new FormData(form);
-                    const entries = Object.fromEntries(data.entries());
-                    return JSON.stringify(entries);
-                }""")
-                log.info("Form data that would be submitted: %s", result)
+                log.info("No fetch/XHR calls detected after submit — button click may be blocked by JS validation")
 
             final_url = page.url
             log.info("Post-login URL: %s", final_url)
