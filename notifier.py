@@ -241,23 +241,31 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             try:
                 ajax_resp = resp_info.value
                 ajax_body = ajax_resp.text()
-                log.info("Login AJAX response [%s]: %s", ajax_resp.status, ajax_body[:500])
+                log.info("Login AJAX response [%s]: %s", ajax_resp.status, ajax_body[:200])
             except Exception as exc:
                 log.warning("Could not read AJAX response: %s", exc)
 
-            page.wait_for_timeout(2_000)
+            # AJAX login succeeded — wait for the JS to store the token and redirect
+            log.info("Waiting for post-login redirect…")
+            try:
+                page.wait_for_url(
+                    lambda url: "login.php" not in url,
+                    timeout=15_000,
+                )
+                log.info("Redirected to: %s", page.url)
+            except PlaywrightTimeoutError:
+                # Some sessions stay on login.php briefly — give JS more time
+                page.wait_for_timeout(3_000)
 
             final_url = page.url
             log.info("Post-login URL: %s", final_url)
 
-            # If password field is still visible, login failed
-            if page.query_selector("input[name='password']"):
+            # Success if we navigated away from login, OR if there's no longer a password field
+            still_on_login = "login.php" in final_url and page.query_selector("input[name='password']")
+            if still_on_login:
                 screenshot_path = Path(__file__).parent / "login_failure.png"
                 page.screenshot(path=str(screenshot_path))
                 log.error("Login failed — screenshot saved to %s", screenshot_path)
-                error_el = page.query_selector(".alert, .error, .invalid-feedback, .modal-body")
-                error_msg = error_el.inner_text() if error_el else "no error message found on page"
-                log.error("Site says: %s", error_msg)
                 browser.close()
                 return False
 
