@@ -208,13 +208,13 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             ls = page.evaluate("() => Object.entries(localStorage)")
             log.info("localStorage contents: %s", ls)
 
-            # Intercept the login POST response to see what the server actually returns
+            # Intercept ALL POST/XHR responses after submit to find the login AJAX call
             login_responses = []
             def capture_response(response):
-                if "login" in response.url.lower() and response.request.method == "POST":
+                if response.request.method in ("POST", "PUT") or "login" in response.url.lower() or "auth" in response.url.lower():
                     try:
                         body = response.text()
-                        login_responses.append({"status": response.status, "url": response.url, "body": body[:500]})
+                        login_responses.append({"status": response.status, "url": response.url, "method": response.request.method, "body": body[:800]})
                     except Exception:
                         pass
             page.on("response", capture_response)
@@ -230,12 +230,24 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             except PlaywrightTimeoutError:
                 pass
 
+            # Give AJAX a moment to complete
+            page.wait_for_timeout(2_000)
+
             # Log what the server responded with
             if login_responses:
                 for r in login_responses:
-                    log.info("Login POST response [%s] %s: %s", r["status"], r["url"], r["body"])
+                    log.info("AJAX [%s %s %s]: %s", r["method"], r["status"], r["url"], r["body"])
             else:
-                log.info("No login POST request captured — form may be submitted via AJAX/fetch")
+                log.info("No POST/auth responses captured — checking all XHR via JS evaluation")
+                # Last resort: use JS to manually submit and capture response
+                result = page.evaluate("""async () => {
+                    const form = document.querySelector('form');
+                    if (!form) return 'no form';
+                    const data = new FormData(form);
+                    const entries = Object.fromEntries(data.entries());
+                    return JSON.stringify(entries);
+                }""")
+                log.info("Form data that would be submitted: %s", result)
 
             final_url = page.url
             log.info("Post-login URL: %s", final_url)
