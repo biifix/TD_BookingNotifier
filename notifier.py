@@ -123,21 +123,27 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             log.info("Navigating to login page: %s", VY_LOGIN_URL)
             page.goto(VY_LOGIN_URL, wait_until="domcontentloaded", timeout=60_000)
 
-            # Dismiss Terms of Use modal if it appears (site shows this when ToU change)
-            try:
-                tos_modal_btn = page.wait_for_selector(
-                    "button:has-text('Accept'), button:has-text('agree'), "
-                    "button:has-text('Continue'), button:has-text('OK'), "
-                    "a:has-text('Accept'), a:has-text('agree'), "
-                    ".modal button, .modal-footer button",
-                    timeout=5_000,
-                )
-                if tos_modal_btn:
-                    log.info("Terms of Use modal detected — accepting.")
-                    tos_modal_btn.click()
-                    page.wait_for_selector(".modal", state="hidden", timeout=5_000)
-            except PlaywrightTimeoutError:
-                pass  # No modal, continue
+            # Give any JS-rendered modals time to appear
+            page.wait_for_timeout(2_000)
+
+            # Dismiss Terms of Use modal — try every visible button/link inside the modal
+            modal = page.query_selector(".modal, [role='dialog'], .popup, .overlay")
+            if modal and modal.is_visible():
+                log.info("Modal detected — dumping its text for debug:")
+                log.info(modal.inner_text()[:300])
+                # Try buttons inside the modal, click the last one (usually Accept/Continue)
+                btns = modal.query_selector_all("button, a.btn, input[type='button'], input[type='submit']")
+                if btns:
+                    log.info("Modal buttons found: %s", [b.inner_text() for b in btns])
+                    btns[-1].click()  # last button is typically the affirmative action
+                else:
+                    # Try clicking the × close button
+                    close = modal.query_selector(".close, [aria-label='Close'], .btn-close")
+                    if close:
+                        close.click()
+                page.wait_for_timeout(1_000)
+            else:
+                log.info("No modal detected on login page.")
 
             # Wait for the username input to be ready
             page.wait_for_selector("input[name='login'], input[name='username']", timeout=20_000)
@@ -165,9 +171,12 @@ def login(session: requests.Session, username: str, password: str) -> bool:
 
             # If password field is still visible, login failed
             if page.query_selector("input[name='password']"):
-                error_el = page.query_selector(".alert, .error, .invalid-feedback")
+                screenshot_path = Path(__file__).parent / "login_failure.png"
+                page.screenshot(path=str(screenshot_path))
+                log.error("Login failed — screenshot saved to %s", screenshot_path)
+                error_el = page.query_selector(".alert, .error, .invalid-feedback, .modal-body")
                 error_msg = error_el.inner_text() if error_el else "no error message found on page"
-                log.error("Login failed — password field still present. Site says: %s", error_msg)
+                log.error("Site says: %s", error_msg)
                 browser.close()
                 return False
 
