@@ -233,23 +233,19 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             page.screenshot(path=str(Path(__file__).parent / "pre_submit.png"))
             log.info("Pre-submit screenshot saved.")
 
-            # Click submit and wait for either a URL change or the password field to disappear
-            page.click("button[type='submit'], input[type='submit']")
+            # Click submit and capture the AJAX response from the known login endpoint
+            with page.expect_response(
+                lambda r: "ajax/auth/login.php" in r.url, timeout=15_000
+            ) as resp_info:
+                page.click("button[type='submit'], input[type='submit']")
             try:
-                page.wait_for_load_state("load", timeout=30_000)
-            except PlaywrightTimeoutError:
-                pass
+                ajax_resp = resp_info.value
+                ajax_body = ajax_resp.text()
+                log.info("Login AJAX response [%s]: %s", ajax_resp.status, ajax_body[:500])
+            except Exception as exc:
+                log.warning("Could not read AJAX response: %s", exc)
 
-            # Give AJAX a moment to complete
             page.wait_for_timeout(2_000)
-
-            # Read what fetch/XHR calls were made
-            fetch_log = page.evaluate("() => window._fetchLog || []")
-            if fetch_log:
-                for entry in fetch_log:
-                    log.info("JS network call: %s %s  body: %s", entry["method"], entry["url"], entry["body"][:300])
-            else:
-                log.info("No fetch/XHR calls detected after submit — button click may be blocked by JS validation")
 
             final_url = page.url
             log.info("Post-login URL: %s", final_url)
