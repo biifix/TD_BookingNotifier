@@ -121,28 +121,37 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             page = context.new_page()
 
             log.info("Navigating to login page: %s", VY_LOGIN_URL)
-            page.goto(VY_LOGIN_URL, wait_until="domcontentloaded", timeout=30_000)
+            page.goto(VY_LOGIN_URL, wait_until="domcontentloaded", timeout=60_000)
 
-            # Wait for the login input to be ready
-            page.wait_for_selector("input[name='login']", timeout=15_000)
+            # Wait for the username input to be ready
+            page.wait_for_selector("input[name='login'], input[name='username']", timeout=20_000)
 
             # Fill credentials
-            page.fill("input[name='login']", username)
+            username_sel = "input[name='login']" if page.query_selector("input[name='login']") else "input[name='username']"
+            page.fill(username_sel, username)
             page.fill("input[name='password']", password)
 
-            # Submit and wait for URL to change away from the login page
+            # Check the Terms of Use checkbox if present and not already checked
+            tos = page.query_selector("input[type='checkbox']")
+            if tos and not tos.is_checked():
+                tos.check()
+
+            # Click submit and wait for either a URL change or the password field to disappear
             page.click("button[type='submit'], input[type='submit']")
-            page.wait_for_url(lambda url: "login" not in url.lower(), timeout=30_000)
+            try:
+                # Wait for navigation (URL change) — use 'load' which is more reliable than 'networkidle'
+                page.wait_for_load_state("load", timeout=30_000)
+            except PlaywrightTimeoutError:
+                pass  # Some SPAs don't navigate — check the result below instead
 
             final_url = page.url
             log.info("Post-login URL: %s", final_url)
 
-            # If still on the login page, credentials are wrong
-            if "login" in final_url.lower() or page.query_selector("input[name='password']"):
-                log.error(
-                    "Login failed — still on login page after submit. "
-                    "Check VY_USERNAME / VY_PASSWORD."
-                )
+            # If password field is still visible, login failed
+            if page.query_selector("input[name='password']"):
+                error_el = page.query_selector(".alert, .error, .invalid-feedback")
+                error_msg = error_el.inner_text() if error_el else "no error message found on page"
+                log.error("Login failed — password field still present. Site says: %s", error_msg)
                 browser.close()
                 return False
 
