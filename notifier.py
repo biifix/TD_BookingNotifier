@@ -400,36 +400,27 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
             page.goto(dealer_url, wait_until="domcontentloaded", timeout=30_000)
             page.wait_for_timeout(2_000)
 
-            # Step 1: Open the sidebar by clicking the hamburger menu (≡) button
-            opened = page.evaluate("""() => {
-                // Look for the hamburger/menu toggle button
-                const btn = document.querySelector(
-                    '.navbar-toggler, .sidebar-toggle, button.menu, ' +
-                    '[data-toggle="sidebar"], [data-target="#sidebar"], ' +
-                    '.hamburger, button[class*="toggle"], button[class*="menu"]'
-                );
-                if (btn) { btn.click(); return 'opened menu: ' + btn.className; }
-                // Fallback: find any ≡ or burger icon button
-                const all = Array.from(document.querySelectorAll('button, a, i, span'));
-                const burger = all.find(el => {
-                    const cls = (el.className || '').toLowerCase();
-                    const txt = el.textContent.trim();
-                    return cls.includes('burger') || cls.includes('toggle') ||
-                           cls.includes('bars') || txt === '☰' || txt === '≡';
-                });
-                if (burger) { burger.click(); return 'opened via fallback: ' + burger.className; }
-                return 'menu button not found';
+            # Step 1: Open sidebar only if PROSPECTS is not already visible
+            prospects_visible = page.evaluate("""() => {
+                const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
+                const el = all.find(el => el.textContent.trim() === 'PROSPECTS');
+                if (!el) return false;
+                const r = el.getBoundingClientRect();
+                return r.width > 0 && r.height > 0;
             }""")
-            log.info("Hamburger menu: %s", opened)
-            # Wait for sidebar to fully render
-            page.wait_for_timeout(2_500)
+            log.info("PROSPECTS visible before hamburger: %s", prospects_visible)
 
-            # Debug: log all visible sidebar text to see what's in the menu
-            sidebar_text = page.evaluate("""() => {
-                const nav = document.querySelector('nav, .sidebar, .left-panel, #sidebar, [class*="sidebar"], [class*="nav"]');
-                return nav ? nav.innerText : document.body.innerText.substring(0, 500);
-            }""")
-            log.info("Sidebar content after open: %s", sidebar_text[:300])
+            if not prospects_visible:
+                opened = page.evaluate("""() => {
+                    const btn = document.querySelector(
+                        '.navbar-toggle, .hamburger, .sidebar-toggle, ' +
+                        '[data-toggle="sidebar"], button[class*="toggle"]'
+                    );
+                    if (btn) { btn.click(); return 'clicked: ' + btn.className; }
+                    return 'hamburger not found';
+                }""")
+                log.info("Hamburger clicked: %s", opened)
+                page.wait_for_timeout(2_000)
 
             # Step 2: Click PROSPECTS to expand submenu
             # Wait for the sidebar nav items to be rendered
