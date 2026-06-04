@@ -123,58 +123,23 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             log.info("Navigating to login page: %s", VY_LOGIN_URL)
             page.goto(VY_LOGIN_URL, wait_until="domcontentloaded", timeout=60_000)
 
-            # Give any JS-rendered modals time to appear
-            page.wait_for_timeout(2_000)
-
-            # Dismiss Terms of Use modal using JavaScript — finds any visible button
-            # whose text is × or whose class suggests a close/accept action.
-            dismissed = page.evaluate("""() => {
-                // Find any element containing 'Terms of Use' text
-                const allEls = Array.from(document.querySelectorAll('*'));
-                const tos = allEls.find(el =>
-                    el.children.length === 0 &&
-                    el.textContent.includes('Terms of Use') &&
-                    getComputedStyle(el).display !== 'none'
-                );
-                if (!tos) return 'no_tos_found';
-
-                // Walk up to find the modal container
-                let container = tos;
-                for (let i = 0; i < 10; i++) {
-                    container = container.parentElement;
-                    if (!container) break;
-                    const btns = Array.from(container.querySelectorAll('button, a'));
-                    const visibleBtns = btns.filter(b => {
-                        const s = getComputedStyle(b);
-                        return s.display !== 'none' && s.visibility !== 'hidden';
-                    });
-                    if (visibleBtns.length > 0) {
-                        // Prefer accept-like buttons, otherwise take the last one
-                        const acceptBtn = visibleBtns.find(b =>
-                            /accept|agree|continue|ok|close/i.test(b.textContent + b.className)
-                        ) || visibleBtns[visibleBtns.length - 1];
-                        const btnText = acceptBtn.textContent.trim();
-                        acceptBtn.click();
-                        return 'clicked:' + btnText;
-                    }
-                }
-                return 'no_button_found';
-            }""")
-            log.info("Terms of Use modal dismiss result: %s", dismissed)
-            page.wait_for_timeout(1_000)
-
-            # Wait for the username input to be ready
+            # Wait for the login form to be ready
             page.wait_for_selector("input[name='login'], input[name='username']", timeout=20_000)
 
-            # Fill credentials
+            # Fill credentials first
             username_sel = "input[name='login']" if page.query_selector("input[name='login']") else "input[name='username']"
             page.fill(username_sel, username)
             page.fill("input[name='password']", password)
 
-            # Check the Terms of Use checkbox on the login form if present
+            # Check the "I have read Terms of Use" checkbox — required before Sign in
             tos_checkbox = page.query_selector("input[type='checkbox']")
-            if tos_checkbox and not tos_checkbox.is_checked():
-                tos_checkbox.check()
+            if tos_checkbox:
+                if not tos_checkbox.is_checked():
+                    log.info("Checking the 'I have read Terms of Use' checkbox.")
+                    tos_checkbox.check()
+                    page.wait_for_timeout(500)  # let the ToU alert dismiss
+                else:
+                    log.info("ToU checkbox already checked.")
 
             # Click submit and wait for either a URL change or the password field to disappear
             page.click("button[type='submit'], input[type='submit']")
