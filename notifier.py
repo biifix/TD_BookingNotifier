@@ -126,24 +126,42 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             # Give any JS-rendered modals time to appear
             page.wait_for_timeout(2_000)
 
-            # Dismiss Terms of Use modal — try every visible button/link inside the modal
-            modal = page.query_selector(".modal, [role='dialog'], .popup, .overlay")
-            if modal and modal.is_visible():
-                log.info("Modal detected — dumping its text for debug:")
-                log.info(modal.inner_text()[:300])
-                # Try buttons inside the modal, click the last one (usually Accept/Continue)
-                btns = modal.query_selector_all("button, a.btn, input[type='button'], input[type='submit']")
-                if btns:
-                    log.info("Modal buttons found: %s", [b.inner_text() for b in btns])
-                    btns[-1].click()  # last button is typically the affirmative action
-                else:
-                    # Try clicking the × close button
-                    close = modal.query_selector(".close, [aria-label='Close'], .btn-close")
-                    if close:
-                        close.click()
-                page.wait_for_timeout(1_000)
-            else:
-                log.info("No modal detected on login page.")
+            # Dismiss Terms of Use modal using JavaScript — finds any visible button
+            # whose text is × or whose class suggests a close/accept action.
+            dismissed = page.evaluate("""() => {
+                // Find any element containing 'Terms of Use' text
+                const allEls = Array.from(document.querySelectorAll('*'));
+                const tos = allEls.find(el =>
+                    el.children.length === 0 &&
+                    el.textContent.includes('Terms of Use') &&
+                    getComputedStyle(el).display !== 'none'
+                );
+                if (!tos) return 'no_tos_found';
+
+                // Walk up to find the modal container
+                let container = tos;
+                for (let i = 0; i < 10; i++) {
+                    container = container.parentElement;
+                    if (!container) break;
+                    const btns = Array.from(container.querySelectorAll('button, a'));
+                    const visibleBtns = btns.filter(b => {
+                        const s = getComputedStyle(b);
+                        return s.display !== 'none' && s.visibility !== 'hidden';
+                    });
+                    if (visibleBtns.length > 0) {
+                        // Prefer accept-like buttons, otherwise take the last one
+                        const acceptBtn = visibleBtns.find(b =>
+                            /accept|agree|continue|ok|close/i.test(b.textContent + b.className)
+                        ) || visibleBtns[visibleBtns.length - 1];
+                        const btnText = acceptBtn.textContent.trim();
+                        acceptBtn.click();
+                        return 'clicked:' + btnText;
+                    }
+                }
+                return 'no_button_found';
+            }""")
+            log.info("Terms of Use modal dismiss result: %s", dismissed)
+            page.wait_for_timeout(1_000)
 
             # Wait for the username input to be ready
             page.wait_for_selector("input[name='login'], input[name='username']", timeout=20_000)
