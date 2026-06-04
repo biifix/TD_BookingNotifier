@@ -83,8 +83,11 @@ def send_telegram(bot_token: str, chat_id: str, message: str) -> bool:
         "text": message,
         "parse_mode": "HTML",
     }
+    log.debug("Telegram payload: %s", payload)
     try:
         resp = requests.post(url, json=payload, timeout=15)
+        if not resp.ok:
+            log.error("Telegram API error %s: %s", resp.status_code, resp.text)
         resp.raise_for_status()
         log.info("Telegram message sent successfully.")
         return True
@@ -915,8 +918,9 @@ def check_new_bookings(
             log.debug("Already seen booking %s — skipping.", bid)
             continue
 
-        log.info("New booking detected: %s", bid)
+        log.info("New booking detected: %s — raw: %s", bid, booking)
         message = format_booking_message(booking)
+        log.info("Formatted message:\n%s", message)
         success = send_telegram(bot_token, chat_id, message)
         if success:
             seen.add(bid)
