@@ -23,11 +23,11 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 load_dotenv()
 
 VY_BASE_URL = "https://dealers.virtualyard.com.au"
+VY_DEALER_PATH = "/HARMONY-NEW-ENERGY-AUTO-SERVICE-(WSP)-PTY-LTD"
 VY_LOGIN_URL = f"{VY_BASE_URL}/login.php"
 
-# Bookings page URL — adjust after logging in and navigating to the test-drive
-# bookings section. Common paths: /bookings, /test-drives, /appointments, /dashboard
-VY_BOOKINGS_URL = f"{VY_BASE_URL}/bookings"
+# ADJUST: navigate to the test-drive bookings page in your browser after login and paste the URL here
+VY_BOOKINGS_URL = os.getenv("VY_BOOKINGS_URL", f"{VY_BASE_URL}{VY_DEALER_PATH}/bookings")
 
 SEEN_FILE = Path(__file__).parent / "seen_bookings.json"
 
