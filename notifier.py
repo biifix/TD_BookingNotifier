@@ -396,9 +396,13 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
                         pass
             page.on("response", capture)
 
+            ss = lambda name: page.screenshot(path=str(Path(__file__).parent / f"debug_{name}.png"))
+
             dealer_url = f"{VY_BASE_URL}{VY_DEALER_PATH}/"
             page.goto(dealer_url, wait_until="domcontentloaded", timeout=30_000)
             page.wait_for_timeout(2_000)
+            ss("1_after_login")
+            log.info("Screenshot: debug_1_after_login.png")
 
             # Step 1: Open sidebar only if PROSPECTS is not already visible
             prospects_visible = page.evaluate("""() => {
@@ -421,6 +425,8 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
                 }""")
                 log.info("Hamburger clicked: %s", opened)
                 page.wait_for_timeout(2_500)
+                ss("2_after_hamburger")
+                log.info("Screenshot: debug_2_after_hamburger.png")
 
             # Dump all nav links to find TEST DRIVES href/menuId
             nav_links = page.evaluate("""() => {
@@ -437,27 +443,31 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
             }""")
             log.info("Nav links found: %s", nav_links[:30])
 
-            # Find and click the TEST DRIVES link directly by href/onclick
+            # Click PROSPECTS to expand submenu
+            p_clicked = page.evaluate("""() => {
+                const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
+                const el = all.find(el => el.textContent.trim() === 'PROSPECTS');
+                if (el) { el.scrollIntoView(); el.click(); return 'clicked PROSPECTS'; }
+                return 'PROSPECTS not found';
+            }""")
+            log.info("PROSPECTS click: %s", p_clicked)
+            page.wait_for_timeout(1_500)
+            ss("3_after_prospects")
+            log.info("Screenshot: debug_3_after_prospects.png")
+
+            # Click TEST DRIVES
             td_clicked = page.evaluate("""() => {
                 const all = Array.from(document.querySelectorAll('a, li, span, div, button'));
-                // Look for TEST DRIVES by text anywhere in the DOM
-                const el = all.find(el => {
-                    const t = el.textContent.trim().toUpperCase();
-                    return t === 'TEST DRIVES' || t === 'TESTDRIVES';
-                });
-                if (el) {
-                    el.scrollIntoView();
-                    el.click();
-                    return 'clicked TEST DRIVES: ' + el.outerHTML.substring(0, 100);
-                }
-                // Log all text nodes to debug
-                const texts = all.map(e => e.textContent.trim())
-                                 .filter(t => t.length > 2 && t.length < 25);
-                return 'not found. visible texts: ' + [...new Set(texts)].slice(0,30).join(' | ');
+                const el = all.find(el => el.textContent.trim().toUpperCase() === 'TEST DRIVES');
+                if (el) { el.scrollIntoView(); el.click(); return 'clicked TEST DRIVES: ' + el.outerHTML.substring(0, 100); }
+                const texts = all.map(e => e.textContent.trim()).filter(t => t.length > 2 && t.length < 25);
+                return 'not found. texts: ' + [...new Set(texts)].slice(0, 30).join(' | ');
             }""")
-            log.info("TEST DRIVES direct click: %s", td_clicked[:300])
+            log.info("TEST DRIVES click: %s", td_clicked[:300])
             log.info("Waiting for bookings data to load…")
             page.wait_for_timeout(6_000)
+            ss("4_after_test_drives")
+            log.info("Screenshot: debug_4_after_test_drives.png")
 
             # Refresh cookies back into requests.Session
             for cookie in context.cookies():
