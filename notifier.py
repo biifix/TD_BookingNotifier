@@ -698,70 +698,87 @@ def _extract_booking_fields(row) -> dict | None:
     }
 
 
-def _parse_details_html(html: str) -> dict:
-    """Extract name, email, phone, vehicle, datetime, status from a DataTables details cell."""
+def _parse_col2(html: str) -> dict:
+    """Parse col[2] details cell from the Test Drives DataTable.
+
+    Plaintext structure (confirmed from live data):
+      <name> Email <email> Phone <phone> Type Test Drive Location <yard> <vehicle model> Stock#<n>
+
+    The customer name is in the a.loadPage link text.
+    Labels are literal text nodes: 'Email', 'Phone', 'Type', 'Location'.
+    Vehicle model follows the yard name (e.g. 'BYD Nunawading') in the same cell.
+    """
+    import re as _re
     soup = BeautifulSoup(html, "html.parser")
     result: dict = {}
 
-    # The main link often contains customer name
-    main_link = soup.find("a", class_="loadPage")
-    if main_link:
-        result["name"] = main_link.get_text(separator=" ", strip=True)
+    # Name from the loadPage anchor
+    link = soup.find("a", class_="loadPage")
+    if link:
+        result["name"] = link.get_text(strip=True)
 
-    # Look for labeled spans/divs like <span class="...">Name</span>
-    for tag in soup.find_all(["span", "div", "p", "td", "li"]):
-        text = tag.get_text(strip=True)
-        lower = text.lower()
-        if not text:
-            continue
-        # Try sibling/parent text as label for the next element
-        if "name" in lower and not result.get("name") and len(text) > 4:
-            result["name"] = text
-        elif any(k in lower for k in ("@", "email")) and not result.get("email"):
-            # pull out email-looking token
-            import re as _re
-            m = _re.search(r"[\w.+-]+@[\w.-]+\.\w+", text)
-            if m:
-                result["email"] = m.group()
-        elif any(k in lower for k in ("phone", "mobile", "tel")) and not result.get("phone"):
-            import re as _re
-            m = _re.search(r"[\d\s\+\-\(\)]{7,}", text)
-            if m:
-                result["phone"] = m.group().strip()
-
-    # Vehicle: look for BYD model keywords or a "vehicle" label
-    for tag in soup.find_all(["span", "div", "a", "td"]):
-        text = tag.get_text(strip=True)
-        lower = text.lower()
-        if any(v in lower for v in ("byd", "atto", "seal", "han", "tang", "dolphin", "sealion", "shark")) and not result.get("vehicle"):
-            result["vehicle"] = text
-            break
-
-    # Datetime: look for date-like patterns
-    import re as _re
+    # Walk all text nodes to extract labeled values
     full_text = soup.get_text(" ", strip=True)
-    dt_match = _re.search(r"\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}(?:\s+\d{1,2}:\d{2}(?:\s*[APap][Mm])?)?", full_text)
-    if dt_match and not result.get("datetime"):
-        result["datetime"] = dt_match.group()
 
-    # Status: last meaningful text token that looks like a status
-    status_keywords = ("pending", "confirmed", "completed", "cancelled", "new", "active", "done", "scheduled")
-    for tag in soup.find_all(["span", "div", "td", "badge", "label"]):
-        text = tag.get_text(strip=True).lower()
-        if text in status_keywords and not result.get("status"):
-            result["status"] = tag.get_text(strip=True)
+    # Email
+    m = _re.search(r"[\w.+\-]+@[\w.\-]+\.\w+", full_text)
+    if m:
+        result["email"] = m.group()
+
+    # Phone — digits after the word "Phone"
+    m = _re.search(r"Phone\s*([\d\s\+\-\(\)]{7,})", full_text)
+    if m:
+        result["phone"] = m.group(1).strip().split()[0]  # first token (no trailing noise)
+
+    # Vehicle model — appears after the yard name (e.g. "BYD Nunawading")
+    # Pattern: year + BYD + model name
+    m = _re.search(r"((?:20\d{2}\s+)?BYD\s+\S+(?:\s+\S+){0,4}?)(?:\s+Stock#|\s*$)", full_text)
+    if m:
+        candidate = m.group(1).strip()
+        # Exclude pure yard names like "BYD Nunawading" / "BYD Haberfield"
+        yard_words = ("nunawading", "haberfield", "wsp", "harmony", "service")
+        if not any(w in candidate.lower() for w in yard_words):
+            result["vehicle"] = candidate
+
+    # If vehicle still not found, try BYD keyword match excluding yard names
+    if not result.get("vehicle"):
+        for part in full_text.split("Location"):
+            if "BYD" in part:
+                # Take first BYD-containing segment after "Location" label
+                m2 = _re.search(r"((?:20\d{2}\s+)?BYD\s[\w\s]+?)(?:Stock#|$)", part)
+                if m2:
+                    result["vehicle"] = m2.group(1).strip()
+                    break
 
     return result
 
 
-def parse_bookings_json(data) -> list[dict]:
-    """Parse bookings from a Virtual Yard DataTables API JSON response.
+def _parse_col5(text: str) -> tuple[str, str]:
+    """Split col[5] 'Confirmed2026/06/14 01:30 PM' into (status, datetime)."""
+    import re as _re
+    status_words = ("confirmed", "new", "pending", "cancelled", "completed",
+                    "done", "scheduled", "active", "booking", "in contact")
+    m = _re.match(
+        r"^(" + "|".join(status_words) + r")\s*(.+)$",
+        text.strip(),
+        flags=_re.IGNORECASE,
+    )
+    if m:
+        return m.group(1).capitalize(), m.group(2).strip()
+    return "", text.strip()
 
-    The API returns {"data": [row, ...]} where each row is a list of HTML strings:
-      row[0]  — booking ID (plain string)
-      row[1]  — photo HTML (<a class="listphoto ...">)
-      row[2]  — details HTML (<a class="loadPage ..."> with customer info)
-      row[3+] — additional columns (vehicle, datetime, status, etc.)
+
+def parse_bookings_json(data) -> list[dict]:
+    """Parse bookings from the Virtual Yard Test Drives DataTable API.
+
+    Confirmed column layout (menuId=899):
+      row[0] — booking ID
+      row[1] — photo (empty/ignored)
+      row[2] — customer details HTML (name, email, phone, location, vehicle, stock#)
+      row[3] — empty
+      row[4] — action button ("Add") — ignored
+      row[5] — status + datetime concatenated, e.g. "Confirmed2026/06/14 01:30 PM"
+      row[6] — empty
     """
     if isinstance(data, dict):
         items = data.get("data") or []
@@ -772,96 +789,37 @@ def parse_bookings_json(data) -> list[dict]:
         return []
 
     if not items:
-        log.debug("API returned empty list. Response keys: %s", list(data.keys()) if isinstance(data, dict) else "n/a")
+        log.debug("API returned empty. Keys: %s", list(data.keys()) if isinstance(data, dict) else "n/a")
         return []
 
     bookings = []
-    first_row_logged = False
     for row in items:
-        # DataTables array-of-arrays format
-        if isinstance(row, list):
-            if not first_row_logged:
-                for i, cell in enumerate(row):
-                    soup_text = BeautifulSoup(str(cell), "html.parser").get_text(strip=True)
-                    log.info("ROW col[%d]: %s", i, soup_text[:120])
-                first_row_logged = True
-            booking_id = str(row[0]).strip() if row else ""
-            details_html = row[2] if len(row) > 2 else ""
-            fields = _parse_details_html(details_html) if details_html else {}
+        if not isinstance(row, list):
+            continue
 
-            # Parse remaining columns for vehicle, datetime, status, assigned_to
-            for i in range(3, len(row)):
-                cell_html = str(row[i])
-                cell_text = BeautifulSoup(cell_html, "html.parser").get_text(strip=True)
-                cell_lower = cell_text.lower()
-                import re as _re
-                if not fields.get("vehicle") and any(v in cell_lower for v in ("byd", "atto", "seal", "han", "tang", "dolphin", "sealion", "shark")):
-                    fields["vehicle"] = cell_text
-                elif not fields.get("datetime") and _re.search(r"\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}", cell_text):
-                    fields["datetime"] = cell_text
-                elif not fields.get("status") and cell_text.lower() in ("pending", "confirmed", "completed", "cancelled", "new", "active", "done", "scheduled", "booking"):
-                    fields["status"] = cell_text
-                elif not fields.get("assigned_to") and "not assigned" in cell_lower:
-                    fields["assigned_to"] = ""  # explicitly unassigned
-                elif not fields.get("assigned_to") and cell_text and len(cell_text) > 3 and len(cell_text) < 50 and " " in cell_text and not _re.search(r"\d", cell_text):
-                    # Looks like a person's name (two words, no digits) — likely assigned consultant
-                    fields["assigned_to"] = cell_text
-                elif not fields.get("email"):
-                    import re as _re2
-                    m = _re2.search(r"[\w.+-]+@[\w.-]+\.\w+", cell_text)
-                    if m:
-                        fields["email"] = m.group()
-                elif not fields.get("phone"):
-                    m = _re.search(r"[\d\s\+\-\(\)]{7,}", cell_text)
-                    if m and any(c.isdigit() for c in m.group()):
-                        fields["phone"] = m.group().strip()
+        booking_id = str(row[0]).strip() if row else ""
+        details_html = row[2] if len(row) > 2 else ""
+        fields = _parse_col2(details_html) if details_html else {}
 
-            if not booking_id:
-                booking_id = f"{fields.get('name','unknown')}-{fields.get('datetime','unknown')}".lower().replace(" ", "_")
+        # col[5]: "Confirmed2026/06/14 01:30 PM"
+        if len(row) > 5:
+            col5_text = BeautifulSoup(str(row[5]), "html.parser").get_text(strip=True)
+            status, dt = _parse_col5(col5_text)
+            fields.setdefault("status", status)
+            fields.setdefault("datetime", dt)
 
-            bookings.append({
-                "id": booking_id,
-                "name": fields.get("name", "Unknown"),
-                "datetime": fields.get("datetime", "Unknown"),
-                "vehicle": fields.get("vehicle", "Unknown"),
-                "phone": fields.get("phone"),
-                "email": fields.get("email", ""),
-                "status": fields.get("status", ""),
-                "assigned_to": fields.get("assigned_to"),
-            })
+        if not booking_id:
+            booking_id = f"{fields.get('name','unknown')}-{fields.get('datetime','unknown')}".lower().replace(" ", "_")
 
-        # Legacy dict format fallback
-        elif isinstance(row, dict):
-            booking_id = (
-                row.get("id") or row.get("testdriveId") or row.get("prospectId")
-                or row.get("booking_id") or row.get("appointmentId")
-            )
-            name = (
-                row.get("customerName") or row.get("customer_name")
-                or row.get("name") or row.get("customer")
-                or f"{row.get('firstName', '')} {row.get('lastName', '')}".strip()
-                or "Unknown"
-            )
-            booking_datetime = (
-                row.get("appointmentDate") or row.get("appointment_date")
-                or row.get("date") or row.get("datetime")
-                or row.get("scheduled_at") or row.get("startDate") or "Unknown"
-            )
-            vehicle = (
-                row.get("vehicleName") or row.get("vehicle_name")
-                or row.get("vehicle") or row.get("model") or row.get("car") or "Unknown"
-            )
-            if not booking_id:
-                booking_id = f"{name}-{booking_datetime}".lower().replace(" ", "_")
-            bookings.append({
-                "id": str(booking_id),
-                "name": name,
-                "datetime": booking_datetime,
-                "vehicle": vehicle,
-                "phone": row.get("phone") or row.get("mobile"),
-                "email": row.get("email") or row.get("emailAddress") or "",
-                "status": row.get("status") or row.get("bookingStatus") or "",
-            })
+        bookings.append({
+            "id": booking_id,
+            "name": fields.get("name", "Unknown"),
+            "phone": fields.get("phone"),
+            "email": fields.get("email", ""),
+            "vehicle": fields.get("vehicle", "Unknown"),
+            "datetime": fields.get("datetime", "Unknown"),
+            "status": fields.get("status", ""),
+        })
 
     log.info("Parsed %d bookings from API response", len(bookings))
     return bookings
@@ -928,13 +886,6 @@ def check_new_bookings(
         bid = booking["id"]
         if bid in seen:
             log.debug("Already seen booking %s — skipping.", bid)
-            continue
-
-        # Skip bookings already assigned to a consultant
-        assigned = booking.get("assigned_to")
-        if assigned:
-            log.debug("Booking %s already assigned to '%s' — skipping.", bid, assigned)
-            seen.add(bid)
             continue
 
         log.info("New booking detected: %s — raw: %s", bid, booking)
