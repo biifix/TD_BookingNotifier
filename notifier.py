@@ -269,7 +269,8 @@ def login(session: requests.Session, username: str, password: str) -> bool:
                     lambda r: "login.php" in r.url or "verify" in r.url.lower(),
                     timeout=15_000,
                 ) as verify_resp_info:
-                    page.click("button[type='submit'], input[type='submit']")
+                    # Click the visible Verify Code button specifically
+                    page.locator("button[type='submit']:visible, input[type='submit']:visible").first.click()
                 try:
                     vr = verify_resp_info.value
                     log.info("Verify response [%s]: %s", vr.status, vr.text()[:200])
