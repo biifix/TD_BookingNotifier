@@ -505,6 +505,19 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
             ss("4_after_test_drives")
             log.info("Screenshot: debug_4_after_test_drives.png")
 
+            # Click the first test drive row to open the detail view
+            try:
+                first_row = page.locator("table tbody tr, .listview-item, tr.odd, tr.even").first
+                first_row.wait_for(timeout=5_000)
+                first_row.click()
+                page.wait_for_load_state("networkidle", timeout=8_000)
+                ss("5_test_drive_detail")
+                log.info("Screenshot: debug_5_test_drive_detail.png")
+                page.go_back()
+                page.wait_for_load_state("networkidle", timeout=8_000)
+            except Exception as detail_exc:
+                log.warning("Could not open test drive detail: %s", detail_exc)
+
             # Refresh cookies back into requests.Session
             for cookie in context.cookies():
                 session.cookies.set(
