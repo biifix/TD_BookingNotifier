@@ -776,9 +776,15 @@ def parse_bookings_json(data) -> list[dict]:
         return []
 
     bookings = []
+    first_row_logged = False
     for row in items:
         # DataTables array-of-arrays format
         if isinstance(row, list):
+            if not first_row_logged:
+                for i, cell in enumerate(row):
+                    soup_text = BeautifulSoup(str(cell), "html.parser").get_text(strip=True)
+                    log.info("ROW col[%d]: %s", i, soup_text[:120])
+                first_row_logged = True
             booking_id = str(row[0]).strip() if row else ""
             details_html = row[2] if len(row) > 2 else ""
             fields = _parse_details_html(details_html) if details_html else {}
