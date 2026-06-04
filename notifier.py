@@ -398,19 +398,25 @@ def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
             page.goto(dealer_url, wait_until="domcontentloaded", timeout=30_000)
             page.wait_for_timeout(2_000)
 
-            # Click PROSPECTS to expand, then TEST DRIVES
-            prospects = page.query_selector("a:has-text('PROSPECTS'), li:has-text('PROSPECTS')")
-            if prospects:
-                prospects.click()
-                page.wait_for_timeout(1_000)
+            # Click PROSPECTS to expand, then TEST DRIVES — use JS click to bypass viewport issues
+            clicked = page.evaluate("""() => {
+                const all = Array.from(document.querySelectorAll('a, li, span, div'));
+                const prospects = all.find(el => el.textContent.trim() === 'PROSPECTS');
+                if (prospects) { prospects.click(); return 'clicked prospects'; }
+                return 'prospects not found';
+            }""")
+            log.info("Sidebar click result: %s", clicked)
+            page.wait_for_timeout(1_500)
 
-            td_link = page.query_selector("a:has-text('TEST DRIVES'), li:has-text('TEST DRIVES')")
-            if td_link:
-                td_link.click()
-                log.info("Clicked TEST DRIVES — waiting for data to load…")
-                page.wait_for_timeout(4_000)
-            else:
-                log.warning("Could not find TEST DRIVES link in sidebar.")
+            clicked2 = page.evaluate("""() => {
+                const all = Array.from(document.querySelectorAll('a, li, span, div'));
+                const td = all.find(el => el.textContent.trim() === 'TEST DRIVES');
+                if (td) { td.click(); return 'clicked test drives'; }
+                return 'test drives not found';
+            }""")
+            log.info("TEST DRIVES click result: %s", clicked2)
+            log.info("Waiting for bookings data to load…")
+            page.wait_for_timeout(5_000)
 
             # Refresh cookies back into requests.Session
             for cookie in context.cookies():
