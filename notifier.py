@@ -148,10 +148,32 @@ def login(session: requests.Session, username: str, password: str) -> bool:
                         page.wait_for_selector("input[name='login'], input[name='username']", timeout=10_000)
                     page.wait_for_timeout(1_000)
 
-            # Fill credentials
-            username_sel = "input[name='login']" if page.query_selector("input[name='login']") else "input[name='username']"
+            # Log all input fields on the page to help debug field name mismatches
+            all_inputs = page.evaluate("""() =>
+                Array.from(document.querySelectorAll('input')).map(i => ({
+                    name: i.name, type: i.type, id: i.id, placeholder: i.placeholder
+                }))
+            """)
+            log.info("Form inputs found: %s", all_inputs)
+
+            # Detect the username field name from what actually exists in the DOM
+            username_sel = None
+            for candidate in ["login", "username", "user", "email", "name"]:
+                if page.query_selector(f"input[name='{candidate}']"):
+                    username_sel = f"input[name='{candidate}']"
+                    break
+            if not username_sel:
+                log.error("Could not find username input field — inputs: %s", all_inputs)
+                browser.close()
+                return False
+            log.info("Using username selector: %s", username_sel)
+
             page.fill(username_sel, username)
             page.fill("input[name='password']", password)
+
+            # Verify fields were filled
+            filled_user = page.input_value(username_sel)
+            log.info("Username field value after fill: %r (expected %r)", filled_user, username)
 
             # Check the "I have read Terms of Use" checkbox
             tos_checkbox = page.query_selector("input[type='checkbox']")
@@ -159,6 +181,10 @@ def login(session: requests.Session, username: str, password: str) -> bool:
                 log.info("Checking the 'I have read Terms of Use' checkbox.")
                 tos_checkbox.check()
                 page.wait_for_timeout(500)
+
+            # Take a screenshot just before submitting so we can verify form state
+            page.screenshot(path=str(Path(__file__).parent / "pre_submit.png"))
+            log.info("Pre-submit screenshot saved.")
 
             # Click submit and wait for either a URL change or the password field to disappear
             page.click("button[type='submit'], input[type='submit']")
