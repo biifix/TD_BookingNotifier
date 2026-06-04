@@ -320,34 +320,119 @@ def login(session: requests.Session, username: str, password: str) -> bool:
 # Booking fetching & parsing
 # ---------------------------------------------------------------------------
 
+# Cached API endpoint discovered during first navigation (avoids re-navigating each poll)
+_bookings_api_url: str | None = None
+
 
 def fetch_bookings(session: requests.Session) -> list[dict]:
     """
-    Fetch the bookings page and return a parsed list of booking dicts.
+    Fetch test drive bookings.
 
-    ADJUST: Change VY_BOOKINGS_URL if the platform uses a different path.
-    Also check if the data is loaded via a JSON API endpoint (XHR/fetch) —
-    if so, call that API URL directly and parse JSON instead of HTML.
+    First call: uses Playwright to navigate the SPA (PROSPECTS → TEST DRIVES),
+    intercepts the AJAX call, caches the API URL, and parses the response.
+    Subsequent calls: hits the cached API URL directly via requests for speed.
     """
+    global _bookings_api_url
+
+    if _bookings_api_url:
+        return _fetch_bookings_via_api(session)
+    else:
+        return _fetch_bookings_via_browser(session)
+
+
+def _fetch_bookings_via_api(session: requests.Session) -> list[dict]:
+    """Call the cached bookings API endpoint directly."""
     try:
-        log.info("Fetching bookings page: %s", VY_BOOKINGS_URL)
-        resp = session.get(VY_BOOKINGS_URL, timeout=20)
+        log.info("Polling bookings API: %s", _bookings_api_url)
+        resp = session.get(_bookings_api_url, timeout=20)
+        if resp.status_code in (401, 403):
+            log.warning("Session expired (HTTP %s) — will re-navigate next cycle.", resp.status_code)
+            global _bookings_api_url
+            _bookings_api_url = None
+            return []
         resp.raise_for_status()
+        return parse_bookings_json(resp.json())
     except requests.RequestException as exc:
-        log.error("Could not fetch bookings page: %s", exc)
+        log.error("Bookings API request failed: %s", exc)
         return []
 
-    content_type = resp.headers.get("Content-Type", "")
-    if "application/json" in content_type:
-        try:
-            data = resp.json()
-            log.info("Received JSON response — parsing as API data.")
-            return parse_bookings_json(data)
-        except ValueError as exc:
-            log.error("Failed to parse JSON response: %s", exc)
-            return []
 
-    return parse_bookings(resp.text)
+def _fetch_bookings_via_browser(session: requests.Session) -> list[dict]:
+    """Navigate the SPA with Playwright, click TEST DRIVES, capture the API call."""
+    global _bookings_api_url
+    bookings = []
+
+    log.info("Navigating to TEST DRIVES via browser…")
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            context = browser.new_context(user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            ))
+            # Inject cookies from the authenticated requests.Session
+            for name, value in session.cookies.items():
+                context.add_cookies([{
+                    "name": name, "value": value,
+                    "domain": "dealers.virtualyard.com.au", "path": "/"
+                }])
+
+            page = context.new_page()
+
+            # Intercept the test drives API call
+            api_responses = []
+            def capture(response):
+                url = response.url
+                if ("test" in url.lower() or "drive" in url.lower() or
+                        "prospect" in url.lower() or "appointment" in url.lower() or
+                        "booking" in url.lower()):
+                    try:
+                        data = response.json()
+                        api_responses.append((url, data))
+                        log.info("Captured API response from: %s", url)
+                    except Exception:
+                        pass
+            page.on("response", capture)
+
+            dealer_url = f"{VY_BASE_URL}{VY_DEALER_PATH}/"
+            page.goto(dealer_url, wait_until="domcontentloaded", timeout=30_000)
+            page.wait_for_timeout(2_000)
+
+            # Click PROSPECTS to expand, then TEST DRIVES
+            prospects = page.query_selector("a:has-text('PROSPECTS'), li:has-text('PROSPECTS')")
+            if prospects:
+                prospects.click()
+                page.wait_for_timeout(1_000)
+
+            td_link = page.query_selector("a:has-text('TEST DRIVES'), li:has-text('TEST DRIVES')")
+            if td_link:
+                td_link.click()
+                log.info("Clicked TEST DRIVES — waiting for data to load…")
+                page.wait_for_timeout(4_000)
+            else:
+                log.warning("Could not find TEST DRIVES link in sidebar.")
+
+            # Refresh cookies back into requests.Session
+            for cookie in context.cookies():
+                session.cookies.set(
+                    cookie["name"], cookie["value"],
+                    domain=cookie.get("domain", "").lstrip(".")
+                )
+
+            browser.close()
+
+        if api_responses:
+            url, data = api_responses[-1]
+            _bookings_api_url = url
+            log.info("Cached bookings API URL: %s", url)
+            bookings = parse_bookings_json(data)
+        else:
+            log.warning("No bookings API call captured — trying to parse page HTML is not possible for this SPA.")
+
+    except Exception as exc:
+        log.error("Browser navigation for bookings failed: %s", exc)
+
+    return bookings
 
 
 def parse_bookings(html: str) -> list[dict]:
@@ -450,19 +535,14 @@ def _extract_booking_fields(row) -> dict | None:
 
 
 def parse_bookings_json(data) -> list[dict]:
-    """
-    Parse bookings from a JSON API response.
-    ADJUST: Inspect the actual JSON structure and map fields accordingly.
-    """
+    """Parse bookings from a Virtual Yard API JSON response."""
     if isinstance(data, list):
         items = data
     elif isinstance(data, dict):
         items = (
-            data.get("bookings")
-            or data.get("appointments")
-            or data.get("data")
-            or data.get("results")
-            or []
+            data.get("records") or data.get("rows")
+            or data.get("bookings") or data.get("appointments")
+            or data.get("data") or data.get("results") or []
         )
         if isinstance(items, dict):
             items = list(items.values())
@@ -470,38 +550,38 @@ def parse_bookings_json(data) -> list[dict]:
         log.warning("Unexpected JSON structure: %s", type(data))
         return []
 
+    if not items and isinstance(data, dict):
+        log.debug("API returned empty list. Response keys: %s", list(data.keys()))
+
     bookings = []
     for item in items:
         if not isinstance(item, dict):
             continue
         booking_id = (
-            item.get("id")
-            or item.get("booking_id")
-            or item.get("appointmentId")
+            item.get("id") or item.get("testdriveId") or item.get("prospectId")
+            or item.get("booking_id") or item.get("appointmentId")
         )
         name = (
-            item.get("customer_name")
-            or item.get("name")
-            or item.get("customer")
+            item.get("customerName") or item.get("customer_name")
+            or item.get("name") or item.get("customer")
+            or f"{item.get('firstName', '')} {item.get('lastName', '')}".strip()
             or "Unknown"
         )
         booking_datetime = (
-            item.get("date")
-            or item.get("datetime")
-            or item.get("appointment_date")
-            or item.get("scheduled_at")
-            or "Unknown"
+            item.get("appointmentDate") or item.get("appointment_date")
+            or item.get("date") or item.get("datetime")
+            or item.get("scheduled_at") or item.get("startDate") or "Unknown"
         )
         vehicle = (
-            item.get("vehicle")
-            or item.get("model")
-            or item.get("car")
-            or "Unknown"
+            item.get("vehicleName") or item.get("vehicle_name")
+            or item.get("vehicle") or item.get("model") or item.get("car") or "Unknown"
         )
-        phone = item.get("phone") or item.get("mobile") or item.get("contact_number")
+        phone = item.get("phone") or item.get("mobile") or item.get("mobileNumber") or item.get("contact_number")
+        email = item.get("email") or item.get("emailAddress") or ""
+        status = item.get("status") or item.get("bookingStatus") or ""
 
         if not booking_id:
-            booking_id = f"{name}-{booking_datetime}-{vehicle}".lower().replace(" ", "_")
+            booking_id = f"{name}-{booking_datetime}".lower().replace(" ", "_")
 
         bookings.append({
             "id": str(booking_id),
@@ -509,6 +589,8 @@ def parse_bookings_json(data) -> list[dict]:
             "datetime": booking_datetime,
             "vehicle": vehicle,
             "phone": phone,
+            "email": email,
+            "status": status,
         })
 
     return bookings
@@ -522,13 +604,16 @@ def parse_bookings_json(data) -> list[dict]:
 def format_booking_message(booking: dict) -> str:
     """Format a booking dict into a Telegram message."""
     phone_line = f"\n📞 Phone: {booking['phone']}" if booking.get("phone") else ""
+    email_line = f"\n✉️ Email: {booking['email']}" if booking.get("email") else ""
+    status_line = f"\n📋 Status: {booking['status']}" if booking.get("status") else ""
     return (
         f"🚗 <b>New Test Drive Booking!</b>\n"
-        f"👤 Customer: {booking['name']}\n"
+        f"🆔 ID: {booking['id']}\n"
+        f"👤 Customer: {booking['name']}"
+        f"{phone_line}{email_line}\n"
         f"📅 Date/Time: {booking['datetime']}\n"
         f"🚙 Vehicle: {booking['vehicle']}"
-        f"{phone_line}\n"
-        f"🆔 Booking ID: {booking['id']}"
+        f"{status_line}"
     )
 
 
