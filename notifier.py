@@ -250,12 +250,37 @@ def login(session: requests.Session, username: str, password: str) -> bool:
             try:
                 page.wait_for_url(
                     lambda url: "login.php" not in url,
-                    timeout=15_000,
+                    timeout=8_000,
                 )
                 log.info("Redirected to: %s", page.url)
             except PlaywrightTimeoutError:
-                # Some sessions stay on login.php briefly — give JS more time
-                page.wait_for_timeout(3_000)
+                page.wait_for_timeout(2_000)
+
+            # Handle 2-step verification screen
+            verify_input = page.query_selector("input[name='verifyCode']")
+            if verify_input and verify_input.is_visible():
+                print("\n" + "="*60)
+                print("2-STEP VERIFICATION REQUIRED")
+                print("A verification code has been sent to your email/mobile.")
+                print("="*60)
+                code = input("Enter the verification code: ").strip()
+                verify_input.fill(code)
+                with page.expect_response(
+                    lambda r: "login.php" in r.url or "verify" in r.url.lower(),
+                    timeout=15_000,
+                ) as verify_resp_info:
+                    page.click("button[type='submit'], input[type='submit']")
+                try:
+                    vr = verify_resp_info.value
+                    log.info("Verify response [%s]: %s", vr.status, vr.text()[:200])
+                except Exception:
+                    pass
+                # Wait for redirect after verification
+                try:
+                    page.wait_for_url(lambda url: "login.php" not in url, timeout=15_000)
+                    log.info("Verified — redirected to: %s", page.url)
+                except PlaywrightTimeoutError:
+                    page.wait_for_timeout(3_000)
 
             final_url = page.url
             log.info("Post-login URL: %s", final_url)
