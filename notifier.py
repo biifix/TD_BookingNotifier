@@ -673,27 +673,16 @@ def _parse_col2(html: str) -> dict:
     result: dict = {}
 
     # Name and detail page URL from the loadPage anchor
+    # Anchor format: <a class="loadPage" data-page="lead" data-id="&amp;leadId=3791781">Name</a>
     link = soup.find("a", class_="loadPage")
     if link:
         result["name"] = link.get_text(strip=True)
-        log.debug("loadPage raw HTML: %s", link)
-        href = link.get("href", "")
-        onclick = link.get("onclick", "")
-        # Try href first
-        if href and href not in ("#", "javascript:void(0)", "javascript:;"):
-            result["detail_path"] = href if href.startswith("/") else f"/{href}"
-        # Fall back to onclick — extract URL from loadPage('...') or similar JS calls
-        elif onclick:
-            import re as _re
-            m = _re.search(r"loadPage\(['\"]([^'\"]+)['\"]", onclick)
-            if m:
-                path = m.group(1)
-                result["detail_path"] = path if path.startswith("/") else f"/{path}"
-            else:
-                # Try any quoted path-like string
-                m = _re.search(r"['\"](/[^'\"]+)['\"]", onclick)
-                if m:
-                    result["detail_path"] = m.group(1)
+        data_page = link.get("data-page", "")
+        data_id = link.get("data-id", "")  # e.g. "&leadId=3791781" (HTML-decoded by BS4)
+        if data_page and data_id:
+            # Strip leading & if present, giving "leadId=3791781"
+            qs = data_id.lstrip("&")
+            result["detail_path"] = f"{VY_DEALER_PATH}/?page={data_page}&{qs}"
 
     # Walk all text nodes to extract labeled values
     full_text = soup.get_text(" ", strip=True)
@@ -804,17 +793,11 @@ def parse_bookings_json(data) -> list[dict]:
     return bookings
 
 
-def fetch_assigned_to(session: requests.Session, detail_path: str, booking_id: str = "") -> str | None:
+def fetch_assigned_to(session: requests.Session, detail_path: str) -> str | None:
     """Fetch a lead detail page and return the 'Assigned to' value, or None if unassigned/unknown."""
-    if not detail_path and not booking_id:
+    if not detail_path:
         return None
-    # Construct URL: prefer explicit path, else try known URL patterns from booking ID
-    if detail_path:
-        url = f"{VY_BASE_URL}{detail_path}"
-    else:
-        # Try the common leads detail URL pattern
-        url = f"{VY_BASE_URL}{VY_DEALER_PATH}/leads/{booking_id}"
-        log.debug("No detail_path for booking %s — trying constructed URL: %s", booking_id, url)
+    url = f"{VY_BASE_URL}{detail_path}"
     try:
         resp = session.get(url, timeout=15)
         if not resp.ok:
@@ -908,7 +891,7 @@ def check_new_bookings(
             continue
 
         # Check if already assigned to a consultant
-        assigned_to = fetch_assigned_to(session, booking.get("detail_path", ""), bid)
+        assigned_to = fetch_assigned_to(session, booking.get("detail_path", ""))
         if assigned_to:
             log.info("Booking %s already assigned to '%s' — skipping.", bid, assigned_to)
             seen.add(bid)
