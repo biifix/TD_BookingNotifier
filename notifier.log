@@ -1,0 +1,437 @@
+2026-06-05 11:23:20 [INFO] Starting BYD Booking Notifier (poll every 60s).
+2026-06-05 11:23:20 [DEBUG] Loaded 104 seen booking IDs from /Users/hanjingc/Documents/GitHub/TD_BookingNotifier/seen_bookings.json
+2026-06-05 11:23:20 [INFO] Launching headless browser to log in…
+2026-06-05 11:23:20 [DEBUG] Using selector: KqueueSelector
+2026-06-05 11:23:21 [INFO] Navigating to login page: https://dealers.virtualyard.com.au/login.php
+2026-06-05 11:23:22 [INFO] ToU alert visible — clicking 'Terms of Use' link to visit the page.
+2026-06-05 11:23:23 [INFO] ToU page opened: https://virtualyard.com/terms-and-conditions — closing and returning to login.
+2026-06-05 11:23:24 [INFO] Form inputs found: [{'name': 'auth', 'type': 'hidden', 'id': 'auth', 'placeholder': ''}, {'name': 'duid', 'type': 'hidden', 'id': 'duid', 'placeholder': ''}, {'name': 'login', 'type': 'text', 'id': 'inputEmail', 'placeholder': ''}, {'name': 'password', 'type': 'password', 'id': 'inputPassword', 'placeholder': ''}, {'name': 'terms', 'type': 'checkbox', 'id': 'chkReadTerms', 'placeholder': ''}, {'name': 'verifyMobile', 'type': 'tel', 'id': 'verifyMobile', 'placeholder': ''}, {'name': 'verifyCode', 'type': 'text', 'id': 'verifyCode', 'placeholder': ''}, {'name': 'inputAccessCode', 'type': 'text', 'id': 'inputAccessCode', 'placeholder': ''}, {'name': 'inputPasswordNew', 'type': 'password', 'id': 'inputPasswordNew', 'placeholder': ''}, {'name': 'inputPasswordNewConfirm', 'type': 'password', 'id': 'inputPasswordNewConfirm', 'placeholder': ''}]
+2026-06-05 11:23:24 [INFO] Using username selector: input[name='login']
+2026-06-05 11:23:24 [INFO] Username field value after fill: 'HanjingChen' (expected 'HanjingChen')
+2026-06-05 11:23:24 [INFO] Checking the 'I have read Terms of Use' checkbox.
+2026-06-05 11:23:24 [INFO] Hidden fields — auth: '', duid: '6a22250a1aed0'
+2026-06-05 11:23:24 [INFO] auth/duid not yet set — waiting for JS to populate them (up to 10s)…
+2026-06-05 11:23:34 [WARNING] auth/duid still empty after 10s — JS may need a page interaction to trigger.
+2026-06-05 11:23:35 [INFO] After scroll — auth: '', duid: '6a22250a1aed0'
+2026-06-05 11:23:35 [INFO] localStorage contents: [['duid', '6a22250a1aed0']]
+2026-06-05 11:23:36 [INFO] Pre-submit screenshot saved.
+2026-06-05 11:23:39 [INFO] Login AJAX response [200]: 
+
+
+
+{"area":"AU","error":false,"action":"auth","version":207,"auth":"iiIan23jjNQR9RuMUudHXhcCK23spGw7hXUL1EjyIQYwBHAHgMZwe4HLdMRVc4RMcF7db6Pp4KUwWkxjk8c4sADN-jt--Zl2fuAhF5EN7KmhtP4qpUmys6mYcmFpjvP6gI1
+2026-06-05 11:23:39 [INFO] Waiting for post-login redirect…
+
+============================================================
+2-STEP VERIFICATION REQUIRED
+A verification code has been sent to your email/mobile.
+============================================================
+Enter the verification code: 2026-06-05 11:23:57 [INFO] Verify response [200]: 
+
+
+
+{"area":"AU","auth":"iiIan23jjNQR9RuMUudHXhcCK23spGw7hXUL1EjyIQZavAHira5sLVXs-wZZuduL6ZMxYxyIZejSKLFP8P5tctf_IrDSzHahxTGOYjffrZ9FjzBiv3Bj3R7_fmaYobiPCx2KgUpCj5Sh3FPjGaDFOHfEwEgsUb6uYisdDOhiXz4","a
+2026-06-05 11:24:02 [INFO] Verified — redirected to: https://dealers.virtualyard.com.au/HARMONY-NEW-ENERGY-AUTO-SERVICE-(WSP)-PTY-LTD/
+2026-06-05 11:24:02 [INFO] Post-login URL: https://dealers.virtualyard.com.au/HARMONY-NEW-ENERGY-AUTO-SERVICE-(WSP)-PTY-LTD/
+2026-06-05 11:24:02 [INFO] Login successful — cookies transferred to HTTP session.
+2026-06-05 11:24:02 [INFO] Calling Test Drives API directly (menuId=899)…
+2026-06-05 11:24:02 [DEBUG] Starting new HTTPS connection (1): dealers.virtualyard.com.au:443
+2026-06-05 11:24:02 [DEBUG] https://dealers.virtualyard.com.au:443 "GET /ajax/datatable/search.php?menuId=899&tab=0&stage=0&draw=1&start=0&length=100&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=desc&search%5Bvalue%5D=&search%5Bregex%5D=false&columns%5B0%5D%5Bdata%5D=0&columns%5B0%5D%5Bsearchable%5D=true&columns%5B0%5D%5Borderable%5D=true&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=1&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=false&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=2&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=false&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=3&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=false&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=4&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=false&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B5%5D%5Bdata%5D=5&columns%5B5%5D%5Bsearchable%5D=true&columns%5B5%5D%5Borderable%5D=false&columns%5B5%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B5%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B6%5D%5Bdata%5D=6&columns%5B6%5D%5Bsearchable%5D=true&columns%5B6%5D%5Borderable%5D=false&columns%5B6%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B6%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B7%5D%5Bdata%5D=7&columns%5B7%5D%5Bsearchable%5D=true&columns%5B7%5D%5Borderable%5D=false&columns%5B7%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B7%5D%5Bsearch%5D%5Bregex%5D=false HTTP/1.1" 200 None
+2026-06-05 11:24:02 [INFO] Test Drives API response keys: ['data', 'recordsTotal', 'recordsFiltered', 'totalQty', 'totalValue', 'parent', 'child', 'tree', 'draw']
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3791781" data-page="lead">Chris Gan</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3790463" data-page="lead">Frank Boyd</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3792353" data-page="lead">Grant Mraz</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3790054" data-page="lead">Jeanie Jeanie</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3789488" data-page="lead">Kevin J</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3788800" data-page="lead">Diana Liu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3789031" data-page="lead">Amit Bhatia</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3788409" data-page="lead">Carol Ho</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3787504" data-page="lead">Monita Chui</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3785985" data-page="lead">Jareth Ho</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3785929" data-page="lead">Denise  Hellier</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3784463" data-page="lead">Steven Zhang</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3784121" data-page="lead">Ayman Haidar</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3784247" data-page="lead">Neville Turner</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3784980" data-page="lead">Simon Field</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3783473" data-page="lead">Brendan Morris</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3781815" data-page="lead">Judy Xu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3781786" data-page="lead">Jerry Vhang</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780929" data-page="lead">Tracey Arnott</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3781606" data-page="lead">Alexander Wilkinson</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780696" data-page="lead">Alifia Sachak</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780437" data-page="lead">Robyn Turnbull</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3791910" data-page="lead">Rahul Raj</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780211" data-page="lead">Tao Huang</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780216" data-page="lead">Joshua Hudson</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780215" data-page="lead">Suzanne Lord</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3778351" data-page="lead">James Garretto</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3778483" data-page="lead">David Boentoro</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3776798" data-page="lead">Praveen Muthuthanthirige</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3776635" data-page="lead">Amit Sharma</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3776403" data-page="lead">Jordan Liu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3776403" data-page="lead">Jordan Liu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775369" data-page="lead">Mehdi  Nia</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775357" data-page="lead">Huizhou Ma</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775223" data-page="lead">Ngoc T H Le</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775154" data-page="lead">Sam Cheah</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775155" data-page="lead">Diana Liu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775161" data-page="lead">Jill Leong</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3774675" data-page="lead">Dale Smith</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3774805" data-page="lead">Kai Dong Shen</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3774805" data-page="lead">Kai Dong Shen</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3773932" data-page="lead">Coral Yao</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3778579" data-page="lead">Jamie Lee</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3772963" data-page="lead">Ilan C</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3772152" data-page="lead">Wenyi Lu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3769598" data-page="lead">Abdul Samad</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3768683" data-page="lead">Rose Lin</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3768534" data-page="lead">Joyce To</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3766764" data-page="lead">Sheng Xu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3766764" data-page="lead">Sheng Xu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3765372" data-page="lead">Jamshed Irani</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3777134" data-page="lead">Yan Shi</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3763992" data-page="lead">Daniel Clark</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775670" data-page="lead">Cherry Ding</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3760336" data-page="lead">Zhiming Chen</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3759938" data-page="lead">Sunny a</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3756609" data-page="lead">Desiree Terrill</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3755612" data-page="lead">Shaun Backhaus</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3751625" data-page="lead">Alicia Khaw</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3751045" data-page="lead">Ryan a</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3753066" data-page="lead">Edward Liu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3742768" data-page="lead">Jia Li</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3742377" data-page="lead">Morgan Zhou</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3745953" data-page="lead">Shaun Tilley</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780474" data-page="lead">Xiaowei Ding</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3737861" data-page="lead">Venkatesh NT</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3737315" data-page="lead">Mareise A Dooley</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3737891" data-page="lead">Alan Tong</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3734395" data-page="lead">Stacey Camerino</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3731964" data-page="lead">liu  chen</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3732284" data-page="lead">Isabelo Mercado</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3731817" data-page="lead">Bryden Chew</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3787504" data-page="lead">Monita Chui</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3741963" data-page="lead">Jessica Lim</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3737302" data-page="lead">Daniel Palermo</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3726904" data-page="lead">Mengjin Lin</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3744169" data-page="lead">Gopal Sharma</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3742490" data-page="lead">Adamas B</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3720111" data-page="lead">Vaishali Chitroda</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3723668" data-page="lead">Jenny Nguyen</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3714798" data-page="lead">Harjee </a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3741655" data-page="lead">Jessica Lim</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3714960" data-page="lead">WANGZHOU FAN</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3752392" data-page="lead">Xue Li</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3712458" data-page="lead">Asif L</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3710537" data-page="lead">Greg Clarkson</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3765856" data-page="lead">Ronald White</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3708520" data-page="lead">Stuart Davies</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3748950" data-page="lead">xiujiao yu</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3714747" data-page="lead">Harkiran Singh</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3702643" data-page="lead">Joo Soo Lim</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3701196" data-page="lead">Geoff Lee</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3744529" data-page="lead">Sam Guo</a>
+2026-06-05 11:24:02 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3704149" data-page="lead">peter xu</a>
+2026-06-05 11:24:02 [INFO] Parsed 100 bookings from API response
+2026-06-05 11:24:02 [DEBUG] Already seen booking 352862 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 352672 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 352642 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 352635 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 352509 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 352332 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 352283 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 352233 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 351981 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 351640 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 351627 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 351310 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 351178 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 351120 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 351091 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 351080 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350766 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350760 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350595 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350526 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350517 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350461 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350446 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350432 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350355 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350228 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 350176 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349983 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349872 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349868 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349862 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349832 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349688 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349658 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349657 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349466 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349462 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349419 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349301 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349291 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349285 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349254 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349124 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349123 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349090 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 349043 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 348854 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 348608 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 347970 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 347866 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 347850 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 347300 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 347299 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 347276 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 347152 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 347127 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 346983 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 346490 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 346457 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 345908 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 345789 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 345282 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 345176 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 344808 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 343957 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 343754 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 343619 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 343170 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 342758 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 342389 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 342346 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 342271 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 342266 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 341742 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 341367 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 341318 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 341308 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 341212 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 341131 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 340831 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 340332 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 339835 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 339405 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 339208 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 338933 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 338644 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 338638 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 338633 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 338588 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 338499 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 337998 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 337464 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 337317 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 336888 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 336794 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 336506 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 335498 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 335214 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 335154 — skipping.
+2026-06-05 11:24:02 [DEBUG] Already seen booking 334993 — skipping.
+2026-06-05 11:24:02 [INFO] No new bookings this cycle.
+2026-06-05 11:24:02 [INFO] Scheduler running. Press Ctrl+C to stop.
+2026-06-05 11:25:03 [DEBUG] Running job Job(interval=60, unit=seconds, do=job, args=(), kwargs={})
+2026-06-05 11:25:03 [INFO] Polling bookings API: https://dealers.virtualyard.com.au/ajax/datatable/search.php?menuId=899&tab=0&stage=0&draw=1&start=0&length=100&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=desc&search%5Bvalue%5D=&search%5Bregex%5D=false&columns%5B0%5D%5Bdata%5D=0&columns%5B0%5D%5Bsearchable%5D=true&columns%5B0%5D%5Borderable%5D=true&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=1&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=false&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=2&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=false&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=3&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=false&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=4&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=false&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B5%5D%5Bdata%5D=5&columns%5B5%5D%5Bsearchable%5D=true&columns%5B5%5D%5Borderable%5D=false&columns%5B5%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B5%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B6%5D%5Bdata%5D=6&columns%5B6%5D%5Bsearchable%5D=true&columns%5B6%5D%5Borderable%5D=false&columns%5B6%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B6%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B7%5D%5Bdata%5D=7&columns%5B7%5D%5Bsearchable%5D=true&columns%5B7%5D%5Borderable%5D=false&columns%5B7%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B7%5D%5Bsearch%5D%5Bregex%5D=false
+2026-06-05 11:25:03 [DEBUG] Resetting dropped connection: dealers.virtualyard.com.au
+2026-06-05 11:25:03 [DEBUG] https://dealers.virtualyard.com.au:443 "GET /ajax/datatable/search.php?menuId=899&tab=0&stage=0&draw=1&start=0&length=100&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=desc&search%5Bvalue%5D=&search%5Bregex%5D=false&columns%5B0%5D%5Bdata%5D=0&columns%5B0%5D%5Bsearchable%5D=true&columns%5B0%5D%5Borderable%5D=true&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=1&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=false&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=2&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=false&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=3&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=false&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=4&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=false&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B5%5D%5Bdata%5D=5&columns%5B5%5D%5Bsearchable%5D=true&columns%5B5%5D%5Borderable%5D=false&columns%5B5%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B5%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B6%5D%5Bdata%5D=6&columns%5B6%5D%5Bsearchable%5D=true&columns%5B6%5D%5Borderable%5D=false&columns%5B6%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B6%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B7%5D%5Bdata%5D=7&columns%5B7%5D%5Bsearchable%5D=true&columns%5B7%5D%5Borderable%5D=false&columns%5B7%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B7%5D%5Bsearch%5D%5Bregex%5D=false HTTP/1.1" 200 None
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3791781" data-page="lead">Chris Gan</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3790463" data-page="lead">Frank Boyd</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3792353" data-page="lead">Grant Mraz</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3790054" data-page="lead">Jeanie Jeanie</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3789488" data-page="lead">Kevin J</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3788800" data-page="lead">Diana Liu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3789031" data-page="lead">Amit Bhatia</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3788409" data-page="lead">Carol Ho</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3787504" data-page="lead">Monita Chui</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3785985" data-page="lead">Jareth Ho</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3785929" data-page="lead">Denise  Hellier</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3784463" data-page="lead">Steven Zhang</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3784121" data-page="lead">Ayman Haidar</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3784247" data-page="lead">Neville Turner</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3784980" data-page="lead">Simon Field</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3783473" data-page="lead">Brendan Morris</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3781815" data-page="lead">Judy Xu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3781786" data-page="lead">Jerry Vhang</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780929" data-page="lead">Tracey Arnott</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3781606" data-page="lead">Alexander Wilkinson</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780696" data-page="lead">Alifia Sachak</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780437" data-page="lead">Robyn Turnbull</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3791910" data-page="lead">Rahul Raj</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780211" data-page="lead">Tao Huang</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780216" data-page="lead">Joshua Hudson</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780215" data-page="lead">Suzanne Lord</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3778351" data-page="lead">James Garretto</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3778483" data-page="lead">David Boentoro</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3776798" data-page="lead">Praveen Muthuthanthirige</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3776635" data-page="lead">Amit Sharma</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3776403" data-page="lead">Jordan Liu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3776403" data-page="lead">Jordan Liu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775369" data-page="lead">Mehdi  Nia</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775357" data-page="lead">Huizhou Ma</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775223" data-page="lead">Ngoc T H Le</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775154" data-page="lead">Sam Cheah</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775155" data-page="lead">Diana Liu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775161" data-page="lead">Jill Leong</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3774675" data-page="lead">Dale Smith</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3774805" data-page="lead">Kai Dong Shen</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3774805" data-page="lead">Kai Dong Shen</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3773932" data-page="lead">Coral Yao</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3778579" data-page="lead">Jamie Lee</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3772963" data-page="lead">Ilan C</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3772152" data-page="lead">Wenyi Lu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3769598" data-page="lead">Abdul Samad</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3768683" data-page="lead">Rose Lin</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3768534" data-page="lead">Joyce To</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3766764" data-page="lead">Sheng Xu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3766764" data-page="lead">Sheng Xu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3765372" data-page="lead">Jamshed Irani</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3777134" data-page="lead">Yan Shi</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3763992" data-page="lead">Daniel Clark</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3775670" data-page="lead">Cherry Ding</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3760336" data-page="lead">Zhiming Chen</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3759938" data-page="lead">Sunny a</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3756609" data-page="lead">Desiree Terrill</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3755612" data-page="lead">Shaun Backhaus</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3751625" data-page="lead">Alicia Khaw</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3751045" data-page="lead">Ryan a</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3753066" data-page="lead">Edward Liu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3742768" data-page="lead">Jia Li</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3742377" data-page="lead">Morgan Zhou</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3745953" data-page="lead">Shaun Tilley</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3780474" data-page="lead">Xiaowei Ding</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3737861" data-page="lead">Venkatesh NT</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3737315" data-page="lead">Mareise A Dooley</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3737891" data-page="lead">Alan Tong</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3734395" data-page="lead">Stacey Camerino</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3731964" data-page="lead">liu  chen</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3732284" data-page="lead">Isabelo Mercado</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3731817" data-page="lead">Bryden Chew</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3787504" data-page="lead">Monita Chui</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3741963" data-page="lead">Jessica Lim</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3737302" data-page="lead">Daniel Palermo</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3726904" data-page="lead">Mengjin Lin</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3744169" data-page="lead">Gopal Sharma</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3742490" data-page="lead">Adamas B</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3720111" data-page="lead">Vaishali Chitroda</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3723668" data-page="lead">Jenny Nguyen</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3714798" data-page="lead">Harjee </a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3741655" data-page="lead">Jessica Lim</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3714960" data-page="lead">WANGZHOU FAN</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3752392" data-page="lead">Xue Li</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3712458" data-page="lead">Asif L</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3710537" data-page="lead">Greg Clarkson</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3765856" data-page="lead">Ronald White</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3708520" data-page="lead">Stuart Davies</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3748950" data-page="lead">xiujiao yu</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3714747" data-page="lead">Harkiran Singh</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3702643" data-page="lead">Joo Soo Lim</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3701196" data-page="lead">Geoff Lee</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3744529" data-page="lead">Sam Guo</a>
+2026-06-05 11:25:03 [DEBUG] loadPage raw HTML: <a class="loadPage" data-id="&amp;leadId=3704149" data-page="lead">peter xu</a>
+2026-06-05 11:25:03 [INFO] Parsed 100 bookings from API response
+2026-06-05 11:25:03 [DEBUG] Already seen booking 352862 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 352672 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 352642 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 352635 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 352509 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 352332 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 352283 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 352233 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 351981 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 351640 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 351627 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 351310 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 351178 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 351120 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 351091 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 351080 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350766 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350760 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350595 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350526 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350517 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350461 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350446 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350432 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350355 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350228 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 350176 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349983 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349872 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349868 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349862 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349832 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349688 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349658 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349657 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349466 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349462 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349419 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349301 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349291 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349285 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349254 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349124 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349123 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349090 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 349043 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 348854 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 348608 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 347970 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 347866 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 347850 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 347300 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 347299 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 347276 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 347152 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 347127 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 346983 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 346490 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 346457 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 345908 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 345789 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 345282 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 345176 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 344808 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 343957 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 343754 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 343619 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 343170 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 342758 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 342389 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 342346 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 342271 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 342266 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 341742 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 341367 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 341318 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 341308 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 341212 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 341131 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 340831 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 340332 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 339835 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 339405 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 339208 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 338933 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 338644 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 338638 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 338633 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 338588 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 338499 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 337998 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 337464 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 337317 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 336888 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 336794 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 336506 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 335498 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 335214 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 335154 — skipping.
+2026-06-05 11:25:03 [DEBUG] Already seen booking 334993 — skipping.
+2026-06-05 11:25:03 [INFO] No new bookings this cycle.

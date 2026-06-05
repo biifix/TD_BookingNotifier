@@ -32,7 +32,7 @@ VY_BOOKINGS_URL = os.getenv("VY_BOOKINGS_URL", f"{VY_BASE_URL}{VY_DEALER_PATH}/b
 SEEN_FILE = Path(__file__).parent / "seen_bookings.json"
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
